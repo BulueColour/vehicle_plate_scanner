@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // แสดงข้อความต้อนรับ
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('เข้าสู่ระบบสำเร็จ!'),
+          content: Text('LOGIN SUCCESSFULLY!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'MOTO KMITL',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue[900],
                       ),
@@ -72,16 +72,16 @@ class _LoginScreenState extends State<LoginScreen> {
               
               // Form Title
               Text(
-                'เข้าสู่ระบบ',
+                'LOGIN',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[800],
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'กรุณากรอกข้อมูลเพื่อเข้าใช้งาน',
+                'Please fill the following list',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
-                  labelText: 'อีเมล',
+                  labelText: 'Email',
                   hintText: 'example@email.com',
                   prefixIcon: const Icon(Icons.email_outlined),
                   border: OutlineInputBorder(
@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  labelText: 'รหัสผ่าน',
+                  labelText: 'Password',
                   hintText: '••••••••',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
               
               // Login Button
               CustomButton(
-                text: 'เข้าสู่ระบบ',
+                text: 'LOGIN',
                 onPressed: _login,
                 isLoading: _isLoading,
               ),
@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'ยังไม่มีบัญชี? ',
+                    'Do not have account? ',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Navigator.pushNamed(context, '/register');
                     },
                     child: const Text(
-                      'ลงทะเบียน',
+                      'register',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
