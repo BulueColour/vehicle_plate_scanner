@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_button.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,27 +12,61 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  void _login() {
-    // Demo: ตรวจสอบแบบง่ายๆ
+  Future<void> _login() async {
+    // ตรวจสอบข้อมูลที่กรอก
+    if (_emailController.text.isEmpty) {
+      _showErrorSnackBar('กรุณากรอกอีเมล');
+      return;
+    }
+
+    if (_passwordController.text.isEmpty) {
+      _showErrorSnackBar('กรุณากรอกรหัสผ่าน');
+      return;
+    }
+
     setState(() => _isLoading = true);
-    
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() => _isLoading = false);
-      
-      // Demo: ให้ login ผ่านเสมอ
-      Navigator.pushReplacementNamed(context, '/home');
-      
-      // แสดงข้อความต้อนรับ
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('เข้าสู่ระบบสำเร็จ!'),
-          backgroundColor: Colors.green,
-        ),
+
+    try {
+      // เข้าสู่ระบบด้วย Firebase Auth
+      await _authService.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
-    });
+
+      // แสดงข้อความสำเร็จ
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('เข้าสู่ระบบสำเร็จ!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // AuthWrapper จะจัดการการนำทางไปหน้า Home อัตโนมัติ
+      }
+    } catch (e) {
+      // แสดงข้อความผิดพลาด
+      if (mounted) {
+        _showErrorSnackBar(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -102,8 +137,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   filled: true,
                   fillColor: Colors.white,
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red),
+                  ),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                enabled: !_isLoading,
               ),
               
               const SizedBox(height: 16),
@@ -122,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? Icons.visibility_outlined 
                         : Icons.visibility_off_outlined,
                     ),
-                    onPressed: () {
+                    onPressed: _isLoading ? null : () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
                       });
@@ -133,7 +174,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   filled: true,
                   fillColor: Colors.white,
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red),
+                  ),
                 ),
+                textInputAction: TextInputAction.done,
+                enabled: !_isLoading,
+                onSubmitted: (_) => _login(),
               ),
               
               const SizedBox(height: 24),
@@ -141,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Login Button
               CustomButton(
                 text: 'เข้าสู่ระบบ',
-                onPressed: _login,
+                onPressed: _isLoading ? () {} : _login,
                 isLoading: _isLoading,
               ),
               
@@ -156,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   TextButton(
-                    onPressed: () {
+                    onPressed: _isLoading ? null : () {
                       Navigator.pushNamed(context, '/register');
                     },
                     child: const Text(

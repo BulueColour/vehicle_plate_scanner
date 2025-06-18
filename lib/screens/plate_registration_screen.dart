@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../widgets/custom_button.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../models/user_model.dart';
 
 class PlateRegistrationScreen extends StatefulWidget {
   const PlateRegistrationScreen({super.key});
@@ -10,6 +13,9 @@ class PlateRegistrationScreen extends StatefulWidget {
 }
 
 class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
+  final AuthService _authService = AuthService();
+  final DatabaseService _databaseService = DatabaseService();
+  
   bool _isScanning = false;
   String? _plateNumber;
   Map<String, dynamic>? _userData;
@@ -56,7 +62,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
     });
   }
 
-  void _completeRegistration() {
+  void _completeRegistration() async {
     if (_plateNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -67,63 +73,103 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       return;
     }
 
-    // จำลองการบันทึกข้อมูลลง Firebase
     setState(() => _isScanning = true);
-    
-    Future.delayed(const Duration(seconds: 2), () {
+
+    try {
+      // 1. ตรวจสอบว่าป้ายทะเบียนซ้ำหรือไม่
+      bool plateExists = await _databaseService.isLicensePlateExists(_plateNumber!);
+      if (plateExists) {
+        throw 'ป้ายทะเบียน $_plateNumber มีคนใช้แล้ว';
+      }
+
+      // 2. สร้างบัญชี Firebase Auth
+      final userCredential = await _authService.createUserWithEmailAndPassword(
+        _userData!['email'],
+        _userData!['password'],
+      );
+
+      if (userCredential?.user == null) {
+        throw 'ไม่สามารถสร้างบัญชีได้';
+      }
+
+      // 3. สร้างข้อมูลผู้ใช้ใน Firestore
+      UserModel newUser = UserModel(
+        uid: userCredential!.user!.uid,
+        licensePlateNumber: _plateNumber!,
+        email: _userData!['email'],
+        phoneNumber: _userData!['phone'],
+        createAt: DateTime.now(),
+      );
+
+      await _databaseService.createUser(newUser);
+
+      // 4. แสดงผลสำเร็จ
       setState(() => _isScanning = false);
       
-      // แสดงผลสำเร็จ
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green[600]),
-              const SizedBox(width: 8),
-              const Text('สำเร็จ!'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('ลงทะเบียนเสร็จสิ้น'),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[600]),
+                const SizedBox(width: 8),
+                const Text('สำเร็จ!'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('ลงทะเบียนเสร็จสิ้น'),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('อีเมล: ${_userData!['email']}'),
+                      Text('โทรศัพท์: ${_userData!['phone']}'),
+                      Text('ป้ายทะเบียน: $_plateNumber'),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('อีเมล: ${_userData!['email']}'),
-                    Text('โทรศัพท์: ${_userData!['phone']}'),
-                    Text('ป้ายทะเบียน: $_plateNumber'),
-                  ],
-                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // ปิด dialog
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/home',
+                    (route) => false,
+                  );
+                },
+                child: const Text('เข้าสู่ระบบ'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // ปิด dialog
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/home',
-                  (route) => false,
-                );
-              },
-              child: const Text('เข้าสู่ระบบ'),
-            ),
-          ],
-        ),
-      );
-    });
+        );
+      }
+
+    } catch (e) {
+      setState(() => _isScanning = false);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
