@@ -16,7 +16,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   // Demo data
   final Map<String, Map<String, dynamic>> _demoDatabase = {
-    'บม 3107': {
+    'กข 1234': {
       'owner': 'นายสิทธิพงศ์ บุญเทียน',
       'brand': 'Audi',
       'model': 'R8',
