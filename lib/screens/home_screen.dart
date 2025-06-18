@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'test_assets_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -90,9 +89,9 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-
+            
             const SizedBox(height: 32),
-
+            
             // Menu Title
             Text(
               'เมนูหลัก',
@@ -102,9 +101,9 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.grey[800],
               ),
             ),
-
+            
             const SizedBox(height: 16),
-
+            
             // Scan Button
             Card(
               elevation: 4,
@@ -164,9 +163,9 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-
+            
             const SizedBox(height: 16),
-
+            
             // History Card (Demo)
             Card(
               elevation: 4,
@@ -233,90 +232,9 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-
+            
             const Spacer(),
-
-            // Test Assets Card (สำหรับ Development)
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TestAssetsScreen(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.purple[50],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.image,
-                          size: 40,
-                          color: Colors.purple[700],
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'ภาพทดสอบ',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'ทดสอบกับภาพจาก Assets',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.purple[100],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Dev',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.purple,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const Spacer(),
-
+            
             // Footer Info
             Center(
               child: Text(
