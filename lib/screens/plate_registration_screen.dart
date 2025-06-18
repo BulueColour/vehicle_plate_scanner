@@ -100,7 +100,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ชื่อ: ${_userData!['name']}'),
                     Text('อีเมล: ${_userData!['email']}'),
                     Text('โทรศัพท์: ${_userData!['phone']}'),
                     Text('ป้ายทะเบียน: $_plateNumber'),
@@ -320,7 +319,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'หมายเหตุ: ระบบต้องการหมายเลขป้ายทะเบียนของคุณในการลงทะเบียน',
+                      'หมายเหตุ: ป้ายทะเบียนจะใช้เป็น Unique Key ในระบบ',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.amber[800],

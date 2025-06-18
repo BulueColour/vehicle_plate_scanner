@@ -9,22 +9,16 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   void _register() {
     // ตรวจสอบข้อมูลที่กรอก
-    if (_nameController.text.isEmpty) {
-      _showErrorSnackBar('กรุณากรอกชื่อ-นามสกุล');
-      return;
-    }
-    
     if (_emailController.text.isEmpty) {
       _showErrorSnackBar('กรุณากรอกอีเมล');
       return;
@@ -50,7 +44,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context, 
       '/plate-registration',
       arguments: {
-        'name': _nameController.text,
         'email': _emailController.text,
         'phone': _phoneController.text,
         'password': _passwordController.text,
@@ -102,23 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               
               const SizedBox(height: 32),
-              
-              // Name Field
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'ชื่อ-นามสกุล',
-                  hintText: 'กรอกชื่อของคุณ',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-              ),
-              
-              const SizedBox(height: 16),
               
               // Email Field
               TextField(
@@ -284,7 +260,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();

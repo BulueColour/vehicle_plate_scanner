@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6105584954",
+    "project_id": "vehicle-plate-scanner",
+    "storage_bucket": "vehicle-plate-scanner.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6105584954:android:021a8b899970774cf3ac03",
+        "android_client_info": {
+          "package_name": "com.example.vehicle_plate_scanner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQ3NQSYV8QGMlVP7GF-MBeBSxKHl5mK40"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
