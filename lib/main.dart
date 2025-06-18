@@ -4,6 +4,7 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/scanner_screen.dart';
+import 'screens/plate_registration_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
         '/scanner': (context) => const ScannerScreen(),
+        '/plate-registration': (context) => const PlateRegistrationScreen(),
       },
     );
   }

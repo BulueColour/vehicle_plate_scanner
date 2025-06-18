@@ -11,6 +11,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
@@ -18,33 +19,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
 
   void _register() {
-    // Demo: ตรวจสอบแบบง่ายๆ
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รหัสผ่านไม่ตรงกัน!'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // ตรวจสอบข้อมูลที่กรอก
+    if (_nameController.text.isEmpty) {
+      _showErrorSnackBar('กรุณากรอกชื่อ-นามสกุล');
       return;
     }
     
-    setState(() => _isLoading = true);
+    if (_emailController.text.isEmpty) {
+      _showErrorSnackBar('กรุณากรอกอีเมล');
+      return;
+    }
     
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() => _isLoading = false);
-      
-      // แสดงข้อความสำเร็จ
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบ'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      // กลับไปหน้า Login
-      Navigator.pop(context);
-    });
+    if (_phoneController.text.isEmpty) {
+      _showErrorSnackBar('กรุณากรอกหมายเลขโทรศัพท์');
+      return;
+    }
+    
+    if (_passwordController.text.length < 6) {
+      _showErrorSnackBar('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+    
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showErrorSnackBar('รหัสผ่านไม่ตรงกัน!');
+      return;
+    }
+    
+    // ไปหน้าสแกนป้ายทะเบียน
+    Navigator.pushNamed(
+      context, 
+      '/plate-registration',
+      arguments: {
+        'name': _nameController.text,
+        'email': _emailController.text,
+        'phone': _phoneController.text,
+        'password': _passwordController.text,
+      },
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -118,6 +138,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
               
               const SizedBox(height: 16),
               
+              // Phone Field (NEW)
+              TextField(
+                controller: _phoneController,
+                decoration: InputDecoration(
+                  labelText: 'หมายเลขโทรศัพท์',
+                  hintText: '08X-XXX-XXXX',
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              
+              const SizedBox(height: 16),
+              
               // Password Field
               TextField(
                 controller: _passwordController,
@@ -178,11 +216,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
               
               const SizedBox(height: 32),
               
-              // Register Button
+              // Next Step Button
               CustomButton(
-                text: 'ลงทะเบียน',
+                text: 'ขั้นตอนถัดไป',
                 onPressed: _register,
                 isLoading: _isLoading,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Info Box
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: Colors.blue[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ขั้นตอนถัดไป: สแกนป้ายทะเบียนรถของคุณ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               
               const SizedBox(height: 16),
@@ -217,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
