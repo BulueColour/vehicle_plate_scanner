@@ -3,7 +3,7 @@ import '../models/user_model.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  
+
   // Collection reference
   CollectionReference get _usersCollection => _db.collection('users');
 
@@ -67,11 +67,11 @@ class DatabaseService {
       QuerySnapshot query = await _usersCollection
           .where('licensePlateNumber', isEqualTo: licensePlateNumber)
           .get(); // ลบ .limit(1) และ order by ออก
-      
+
       if (query.docs.isNotEmpty) {
         DocumentSnapshot doc = query.docs.first;
         return UserModel.fromMap(
-          doc.data() as Map<String, dynamic>, 
+          doc.data() as Map<String, dynamic>,
           doc.id,
         );
       }
@@ -84,13 +84,12 @@ class DatabaseService {
   // Get all users (for admin purposes)
   Future<List<UserModel>> getAllUsers() async {
     try {
-      QuerySnapshot query = await _usersCollection
-          .orderBy('createAt', descending: true)
-          .get();
-      
+      QuerySnapshot query =
+          await _usersCollection.orderBy('createAt', descending: true).get();
+
       return query.docs.map((doc) {
         return UserModel.fromMap(
-          doc.data() as Map<String, dynamic>, 
+          doc.data() as Map<String, dynamic>,
           doc.id,
         );
       }).toList();
@@ -145,6 +144,43 @@ class DatabaseService {
     }
   }
 
+  // เพิ่มฟังก์ชันนี้ในคลาส DatabaseService
+  Future<void> updateUserProfile({
+    required String uid,
+    required String name,
+    required String phoneNumber,
+    String? facebook,
+    String? additionalInfo,
+  }) async {
+    try {
+      await _usersCollection.doc(uid).update({
+        'name': name,
+        'phone_number': phoneNumber,
+        'facebook': facebook,
+        'additional_info': additionalInfo,
+        'update_at': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw 'ไม่สามารถอัปเดตข้อมูลได้: $e';
+    }
+  }
+
+// เพิ่มฟังก์ชันนี้เพื่อดึงข้อมูลผู้ใช้ด้วย uid
+  Future<UserModel?> getUserById(String uid) async {
+    try {
+      DocumentSnapshot doc = await _usersCollection.doc(uid).get();
+      if (doc.exists) {
+        return UserModel.fromMap(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+      }
+      return null;
+    } catch (e) {
+      throw 'ไม่สามารถดึงข้อมูลผู้ใช้ได้: $e';
+    }
+  }
+
   // Search users by name or license plate number
   Future<List<UserModel>> searchUsers(String searchTerm) async {
     try {
@@ -165,14 +201,14 @@ class DatabaseService {
 
       for (var doc in plateQuery.docs) {
         userMap[doc.id] = UserModel.fromMap(
-          doc.data() as Map<String, dynamic>, 
+          doc.data() as Map<String, dynamic>,
           doc.id,
         );
       }
 
       for (var doc in nameQuery.docs) {
         userMap[doc.id] = UserModel.fromMap(
-          doc.data() as Map<String, dynamic>, 
+          doc.data() as Map<String, dynamic>,
           doc.id,
         );
       }

@@ -47,7 +47,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       await Future.delayed(const Duration(seconds: 3));
       
       // Demo: สุ่มผลลัพธ์ป้ายทะเบียน
-      final List<String> demoPlates = ['กข 1234', 'ขค 5678', 'คง 9999', 'งจ 7777', 'ABC123'];
+      final List<String> demoPlates = ['ขค 5678', 'คง 9999'];
       final randomPlate = demoPlates[DateTime.now().millisecond % demoPlates.length];
       
       setState(() {
@@ -443,7 +443,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'ระบบจะค้นหาข้อมูลเจ้าของรถจากฐานข้อมูล Firebase',
+                      'ระบบจะค้นหาข้อมูลเจ้าของรถจากฐานข้อมูลด้วยเลขป้ายทะเบียน',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.blue[700],

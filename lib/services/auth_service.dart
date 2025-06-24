@@ -9,6 +9,10 @@ class AuthService {
   // Auth state changes stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  String? getCurrentUserId() {
+    return _auth.currentUser?.uid;
+  }
+
   // Sign in with email and password
   Future<UserCredential?> signInWithEmailAndPassword(
     String email,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../models/user_model.dart';
+import 'profile_update_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -141,7 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _currentUser?.name ?? _currentUser?.email ?? 'ผู้ใช้งาน',
+                          _currentUser?.name ??
+                              _currentUser?.email ??
+                              'ผู้ใช้งาน',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 18,
@@ -171,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Menu Title
                   Text(
                     'เมนูหลัก',
@@ -183,9 +186,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.grey[800],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Scan Button
                   Card(
                     elevation: 4,
@@ -245,9 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Profile Card
                   Card(
                     elevation: 4,
@@ -307,9 +310,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // History Card (Demo)
                   Card(
                     elevation: 4,
@@ -376,9 +379,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   // Footer Info
                   Center(
                     child: Text(
@@ -407,18 +410,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInfoRow('อีเมล', _currentUser!.email),
-                  _buildInfoRow('โทรศัพท์', _currentUser!.phoneNumber),
-                  _buildInfoRow('ป้ายทะเบียน', _currentUser!.licensePlateNumber),
+                  _buildInfoRow(
+                      'โทรศัพท์', _currentUser!.phoneNumber ?? 'ยังไม่ได้ระบุ'),
+                  _buildInfoRow('ป้ายทะเบียน',
+                      _currentUser!.licensePlateNumber ?? 'ยังไม่ได้ระบุ'),
                   _buildInfoRow('ชื่อ', _currentUser!.name ?? 'ยังไม่ได้ระบุ'),
-                  if (_currentUser!.facebook != null)
+                  if (_currentUser!.facebook != null &&
+                      _currentUser!.facebook!.isNotEmpty)
                     _buildInfoRow('Facebook', _currentUser!.facebook!),
+                  if (_currentUser!.additionalInfo != null &&
+                      _currentUser!.additionalInfo!.isNotEmpty)
+                    _buildInfoRow(
+                        'ข้อมูลเพิ่มเติม', _currentUser!.additionalInfo!),
                   const SizedBox(height: 16),
-                  const Text(
-                    'หมายเหตุ: สามารถเพิ่มข้อมูลเพิ่มเติมได้ในอนาคต',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  // เพิ่มปุ่มแก้ไขข้อมูล
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context); // ปิด dialog ปัจจุบัน
+                        // นำทางไปหน้าแก้ไขข้อมูล
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileUpdateScreen(),
+                          ),
+                        );
+                        // ถ้าแก้ไขข้อมูลสำเร็จ ให้โหลดข้อมูลใหม่
+                        if (result == true) {
+                          _loadUserData();
+                        }
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('แก้ไขข้อมูล'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ],
