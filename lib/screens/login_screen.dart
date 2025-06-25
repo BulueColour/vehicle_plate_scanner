@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       // แสดงข้อความผิดพลาด
       if (mounted) {
-        _showErrorSnackBar(e.toString());
+        _showErrorSnackBar('ไม่พบผู้ใช้ในระบบหรือรหัสผ่านไม่ถูกต้อง');
       }
     } finally {
       if (mounted) {

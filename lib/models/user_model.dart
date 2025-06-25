@@ -25,28 +25,28 @@ class UserModel {
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     return UserModel(
       uid: uid,
-      licensePlateNumber: map['licensePlateNumber'] ?? '',
+      licensePlateNumber: map['license_plate_number'] ?? '',
       email: map['email'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
+      phoneNumber: map['phone_number'] ?? '',
       name: map['name'],
       facebook: map['facebook'],
-      additionalInfo: map['additionalInfo'],
-      createAt: map['createAt']?.toDate() ?? DateTime.now(),
-      updateAt: map['updateAt']?.toDate(),
+      additionalInfo: map['additional_info'],
+      createAt: map['create_at']?.toDate() ?? DateTime.now(),
+      updateAt: map['update_at']?.toDate(),
     );
   }
 
   // Convert UserModel to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
-      'licensePlateNumber': licensePlateNumber,
+      'license_plate_number': licensePlateNumber,
       'email': email,
-      'phoneNumber': phoneNumber,
+      'phone_number': phoneNumber,
       'name': name,
       'facebook': facebook,
-      'additionalInfo': additionalInfo,
-      'createAt': createAt,
-      'updateAt': updateAt,
+      'additional_info': additionalInfo,
+      'create_at': createAt,
+      'update_at': updateAt,
     };
   }
 
@@ -76,5 +76,25 @@ class UserModel {
   @override
   String toString() {
     return 'UserModel(uid: $uid, licensePlateNumber: $licensePlateNumber, email: $email, phoneNumber: $phoneNumber, name: $name)';
+  }
+  
+  // เพิ่มฟังก์ชันช่วยตรวจสอบข้อมูล
+  bool get isComplete {
+    return uid.isNotEmpty && licensePlateNumber.isNotEmpty && email.isNotEmpty && phoneNumber.isNotEmpty;
+  }
+
+  // เพิ่มฟังก์ชันตรวจสอบว่ามีชื่อหรือไม่
+  bool get hasName {
+    return name != null && name!.isNotEmpty;
+  }
+
+  // เพิ่มฟังก์ชันตรวจสอบว่ามี facebook หรือไม่
+  bool get hasFacebook {
+    return facebook != null && facebook!.isNotEmpty;
+  }
+
+  // เพิ่มฟังก์ชันเช็คว่าเป็นข้อมูลใหม่หรือไม่
+  bool get isNew {
+    return updateAt == null;
   }
 }

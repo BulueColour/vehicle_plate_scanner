@@ -79,7 +79,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       // 1. ตรวจสอบว่าป้ายทะเบียนซ้ำหรือไม่
       bool plateExists = await _databaseService.isLicensePlateExists(_plateNumber!);
       if (plateExists) {
-        throw 'ป้ายทะเบียน $_plateNumber มีคนใช้แล้ว';
+        throw 'ป้ายทะเบียน $_plateNumber มีในระบบแล้ว กรุณาใช้ป้ายทะเบียนอื่น';
       }
 
       // 2. สร้างบัญชี Firebase Auth

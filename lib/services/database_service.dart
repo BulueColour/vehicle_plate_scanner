@@ -33,7 +33,7 @@ class DatabaseService {
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     try {
       // Add updateAt timestamp
-      data['updateAt'] = FieldValue.serverTimestamp();
+      data['update_at'] = FieldValue.serverTimestamp(); // แก้เป็น update_at
       await _usersCollection.doc(uid).update(data);
     } catch (e) {
       throw 'ไม่สามารถอัปเดตข้อมูลผู้ใช้ได้: $e';
@@ -49,24 +49,24 @@ class DatabaseService {
     }
   }
 
-  // Check if license plate number already exists
+  // Check if license plate number already exists (แก้ field name)
   Future<bool> isLicensePlateExists(String licensePlateNumber) async {
     try {
       QuerySnapshot query = await _usersCollection
-          .where('licensePlateNumber', isEqualTo: licensePlateNumber)
-          .get(); // ลบ .limit(1) ออก
+          .where('license_plate_number', isEqualTo: licensePlateNumber) // แก้เป็น license_plate_number
+          .get();
       return query.docs.isNotEmpty;
     } catch (e) {
       throw 'ไม่สามารถตรวจสอบป้ายทะเบียนได้: $e';
     }
   }
 
-  // Get user by license plate number
+  // Get user by license plate number (แก้ field name)
   Future<UserModel?> getUserByLicensePlate(String licensePlateNumber) async {
     try {
       QuerySnapshot query = await _usersCollection
-          .where('licensePlateNumber', isEqualTo: licensePlateNumber)
-          .get(); // ลบ .limit(1) และ order by ออก
+          .where('license_plate_number', isEqualTo: licensePlateNumber) // แก้เป็น license_plate_number
+          .get();
 
       if (query.docs.isNotEmpty) {
         DocumentSnapshot doc = query.docs.first;
@@ -81,11 +81,11 @@ class DatabaseService {
     }
   }
 
-  // Get all users (for admin purposes)
+  // Get all users (for admin purposes) - แก้ field name
   Future<List<UserModel>> getAllUsers() async {
     try {
       QuerySnapshot query =
-          await _usersCollection.orderBy('createAt', descending: true).get();
+          await _usersCollection.orderBy('create_at', descending: true).get(); // แก้เป็น create_at
 
       return query.docs.map((doc) {
         return UserModel.fromMap(
@@ -108,64 +108,84 @@ class DatabaseService {
     });
   }
 
-  // Update specific fields with methods
+  // Update specific fields with methods - แก้ field name
   Future<void> updateUserName(String uid, String name) async {
     try {
       await _usersCollection.doc(uid).update({
         'name': name,
-        'updateAt': FieldValue.serverTimestamp(),
+        'update_at': FieldValue.serverTimestamp(), // แก้เป็น update_at
       });
     } catch (e) {
       throw 'ไม่สามารถอัปเดตชื่อผู้ใช้ได้: $e';
     }
   }
 
-  // Update Facebook profile
+  // Update Facebook profile - แก้ field name
   Future<void> updateUserFacebook(String uid, String facebook) async {
     try {
       await _usersCollection.doc(uid).update({
         'facebook': facebook,
-        'updateAt': FieldValue.serverTimestamp(),
+        'update_at': FieldValue.serverTimestamp(), // แก้เป็น update_at
       });
     } catch (e) {
       throw 'ไม่สามารถอัปเดต Facebook ได้: $e';
     }
   }
 
-  // Update additional info
+  // Update additional info - แก้ field name
   Future<void> updateAdditionalInfo(String uid, String additionalInfo) async {
     try {
       await _usersCollection.doc(uid).update({
-        'additionalInfo': additionalInfo,
-        'updateAt': FieldValue.serverTimestamp(),
+        'additional_info': additionalInfo, // แก้เป็น additional_info
+        'update_at': FieldValue.serverTimestamp(), // แก้เป็น update_at
       });
     } catch (e) {
       throw 'ไม่สามารถอัปเดตข้อมูลเพิ่มเติมได้: $e';
     }
   }
 
-  // เพิ่มฟังก์ชันนี้ในคลาส DatabaseService
+  // ฟังก์ชันหลักสำหรับอัปเดตข้อมูลผู้ใช้ (แก้ field names ให้ตรงกับฐานข้อมูล)
   Future<void> updateUserProfile({
     required String uid,
     required String name,
     required String phoneNumber,
+    String? licensePlateNumber,
     String? facebook,
     String? additionalInfo,
   }) async {
     try {
-      await _usersCollection.doc(uid).update({
+      // สร้าง Map สำหรับข้อมูลที่จะอัปเดต
+      Map<String, dynamic> updateData = {
         'name': name,
-        'phone_number': phoneNumber,
-        'facebook': facebook,
-        'additional_info': additionalInfo,
-        'update_at': FieldValue.serverTimestamp(),
-      });
+        'phone_number': phoneNumber, // แก้เป็น phone_number ตามในฐานข้อมูล
+        'update_at': FieldValue.serverTimestamp(), // แก้เป็น update_at
+      };
+
+      // เพิ่มข้อมูลที่ไม่เป็น null
+      if (licensePlateNumber != null && licensePlateNumber.isNotEmpty) {
+        updateData['license_plate_number'] = licensePlateNumber; // แก้เป็น license_plate_number
+      }
+
+      if (facebook != null && facebook.isNotEmpty) {
+        updateData['facebook'] = facebook;
+      }
+
+      if (additionalInfo != null && additionalInfo.isNotEmpty) {
+        updateData['additional_info'] = additionalInfo; // แก้เป็น additional_info
+      }
+
+      print('Updating user profile with data: $updateData'); // Debug log
+
+      await _usersCollection.doc(uid).update(updateData);
+      
+      print('Profile updated successfully in Firestore'); // Debug log
     } catch (e) {
+      print('Error updating user profile: $e'); // Debug log
       throw 'ไม่สามารถอัปเดตข้อมูลได้: $e';
     }
   }
 
-// เพิ่มฟังก์ชันนี้เพื่อดึงข้อมูลผู้ใช้ด้วย uid
+  // เพิ่มฟังก์ชันนี้เพื่อดึงข้อมูลผู้ใช้ด้วย uid
   Future<UserModel?> getUserById(String uid) async {
     try {
       DocumentSnapshot doc = await _usersCollection.doc(uid).get();
@@ -177,17 +197,18 @@ class DatabaseService {
       }
       return null;
     } catch (e) {
+      print('Error getting user by ID: $e'); // Debug log
       throw 'ไม่สามารถดึงข้อมูลผู้ใช้ได้: $e';
     }
   }
 
-  // Search users by name or license plate number
+  // Search users by name or license plate number - แก้ field names
   Future<List<UserModel>> searchUsers(String searchTerm) async {
     try {
       // Search by license plate number
       QuerySnapshot plateQuery = await _usersCollection
-          .where('licensePlateNumber', isGreaterThanOrEqualTo: searchTerm)
-          .where('licensePlateNumber', isLessThan: searchTerm + '\uf8ff')
+          .where('license_plate_number', isGreaterThanOrEqualTo: searchTerm) // แก้เป็น license_plate_number
+          .where('license_plate_number', isLessThan: searchTerm + '\uf8ff')
           .get();
 
       // Search by name (if exists)
@@ -216,6 +237,25 @@ class DatabaseService {
       return userMap.values.toList();
     } catch (e) {
       throw 'ไม่สามารถค้นหาข้อมูลได้: $e';
+    }
+  }
+
+  // เพิ่มฟังก์ชันเช็คป้ายทะเบียนซ้ำ (แยกจากผู้ใช้ปัจจุบัน)
+  Future<bool> isLicensePlateExistsExcludeUser(String licensePlateNumber, String excludeUid) async {
+    try {
+      QuerySnapshot query = await _usersCollection
+          .where('license_plate_number', isEqualTo: licensePlateNumber)
+          .get();
+
+      // ตรวจสอบว่ามีเอกสารใดที่ไม่ใช่ของผู้ใช้ปัจจุบัน
+      for (DocumentSnapshot doc in query.docs) {
+        if (doc.id != excludeUid) {
+          return true; // พบป้ายทะเบียนซ้ำจากผู้ใช้คนอื่น
+        }
+      }
+      return false;
+    } catch (e) {
+      throw 'ไม่สามารถตรวจสอบป้ายทะเบียนได้: $e';
     }
   }
 }
