@@ -142,15 +142,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _currentUser?.name ??
-                              _currentUser?.email ??
-                              'ผู้ใช้งาน',
+                          _currentUser?.displayName ?? 'ผู้ใช้งาน',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 18,
                           ),
                         ),
-                        if (_currentUser?.licensePlateNumber != null) ...[
+                        // แก้ไขเงื่อนไขการแสดงป้ายทะเบียน
+                        if (_currentUser?.hasLicensePlate == true) ...[
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -284,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'ข้อมูลส่วนตัว',
+                                    'อัปเดตข้อมูลส่วนตัว',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -409,23 +408,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // แสดงเฉพาะข้อมูลที่มี ไม่แสดงข้อความ "ยังไม่ได้ระบุ"
+                  
+                  // อีเมล (แสดงเสมอเพราะเป็น required)
                   _buildInfoRow('อีเมล', _currentUser!.email),
-                  _buildInfoRow(
-                      'โทรศัพท์', _currentUser!.phoneNumber ?? 'ยังไม่ได้ระบุ'),
-                  _buildInfoRow('ป้ายทะเบียน',
-                      _currentUser!.licensePlateNumber ?? 'ยังไม่ได้ระบุ'),
-                  _buildInfoRow('ชื่อ', _currentUser!.name ?? 'ยังไม่ได้ระบุ'),
-                  if (_currentUser!.facebook != null &&
-                      _currentUser!.facebook!.isNotEmpty)
+                  
+                  // โทรศัพท์ (แสดงเฉพาะเมื่อมีข้อมูล)
+                  if (_currentUser!.hasPhoneNumber)
+                    _buildInfoRow('โทรศัพท์', _currentUser!.phoneNumber!),
+                  
+                  // ป้ายทะเบียน (แสดงเฉพาะเมื่อมีข้อมูล)
+                  if (_currentUser!.hasLicensePlate)
+                    _buildInfoRow('ป้ายทะเบียน', _currentUser!.licensePlateNumber!),
+                  
+                  // ชื่อ (แสดงเฉพาะเมื่อมีข้อมูล)
+                  if (_currentUser!.hasName)
+                    _buildInfoRow('ชื่อ', _currentUser!.name!),
+                  
+                  // Facebook (แสดงเฉพาะเมื่อมีข้อมูล)
+                  if (_currentUser!.hasFacebook)
                     _buildInfoRow('Facebook', _currentUser!.facebook!),
+                  
+                  // ข้อมูลเพิ่มเติม (แสดงเฉพาะเมื่อมีข้อมูล)
                   if (_currentUser!.additionalInfo != null &&
                       _currentUser!.additionalInfo!.isNotEmpty)
-                    _buildInfoRow(
-                        'ข้อมูลเพิ่มเติม', _currentUser!.additionalInfo!),
+                    _buildInfoRow('ข้อมูลเพิ่มเติม', _currentUser!.additionalInfo!),
+                  
                   const SizedBox(height: 16),
                   const Divider(),
                   const SizedBox(height: 8),
-                  // เพิ่มปุ่มแก้ไขข้อมูล
+                  
+                  // ปุ่มแก้ไขข้อมูล
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(

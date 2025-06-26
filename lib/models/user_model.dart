@@ -1,8 +1,8 @@
 class UserModel {
   final String uid; // user_id จาก Firebase Auth
-  final String licensePlateNumber; // license_plate_number (UNIQUE, REQUIRED)
+  final String? licensePlateNumber; // license_plate_number (OPTIONAL ให้ยืดหยุ่นมากขึ้น)
   final String email; // email (UNIQUE, REQUIRED)
-  final String phoneNumber; // phone_number (REQUIRED)
+  final String? phoneNumber; // phone_number (OPTIONAL เพราะอาจยังไม่ได้กรอก)
   final String? name; // name (OPTIONAL)
   final String? facebook; // facebook (OPTIONAL)
   final String? additionalInfo; // additional_info (OPTIONAL)
@@ -11,9 +11,9 @@ class UserModel {
 
   UserModel({
     required this.uid,
-    required this.licensePlateNumber,
+    this.licensePlateNumber,
     required this.email,
-    required this.phoneNumber,
+    this.phoneNumber,
     this.name,
     this.facebook,
     this.additionalInfo,
@@ -25,15 +25,22 @@ class UserModel {
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     return UserModel(
       uid: uid,
-      licensePlateNumber: map['license_plate_number'] ?? '',
+      licensePlateNumber: _getNullableString(map['license_plate_number']),
       email: map['email'] ?? '',
-      phoneNumber: map['phone_number'] ?? '',
-      name: map['name'],
-      facebook: map['facebook'],
-      additionalInfo: map['additional_info'],
+      phoneNumber: _getNullableString(map['phone_number']),
+      name: _getNullableString(map['name']),
+      facebook: _getNullableString(map['facebook']),
+      additionalInfo: _getNullableString(map['additional_info']),
       createAt: map['create_at']?.toDate() ?? DateTime.now(),
       updateAt: map['update_at']?.toDate(),
     );
+  }
+
+  // Helper method เพื่อจัดการ null/empty strings
+  static String? _getNullableString(dynamic value) {
+    if (value == null) return null;
+    final stringValue = value.toString().trim();
+    return stringValue.isEmpty ? null : stringValue;
   }
 
   // Convert UserModel to Map for Firestore
@@ -69,7 +76,7 @@ class UserModel {
       facebook: facebook ?? this.facebook,
       additionalInfo: additionalInfo ?? this.additionalInfo,
       createAt: createAt ?? this.createAt,
-      updateAt: DateTime.now(), // Auto-update timestamp
+      updateAt: DateTime.now(),
     );
   }
 
@@ -78,23 +85,40 @@ class UserModel {
     return 'UserModel(uid: $uid, licensePlateNumber: $licensePlateNumber, email: $email, phoneNumber: $phoneNumber, name: $name)';
   }
   
-  // เพิ่มฟังก์ชันช่วยตรวจสอบข้อมูล
+  // ฟังก์ชันตรวจสอบข้อมูลหลัก
   bool get isComplete {
-    return uid.isNotEmpty && licensePlateNumber.isNotEmpty && email.isNotEmpty && phoneNumber.isNotEmpty;
+    return uid.isNotEmpty && email.isNotEmpty;
   }
 
-  // เพิ่มฟังก์ชันตรวจสอบว่ามีชื่อหรือไม่
+  // ตรวจสอบว่ามีป้ายทะเบียนหรือไม่
+  bool get hasLicensePlate {
+    return licensePlateNumber != null && licensePlateNumber!.isNotEmpty;
+  }
+
+  // ตรวจสอบว่ามีชื่อหรือไม่
   bool get hasName {
     return name != null && name!.isNotEmpty;
   }
 
-  // เพิ่มฟังก์ชันตรวจสอบว่ามี facebook หรือไม่
+  // ตรวจสอบว่ามีเบอร์โทรหรือไม่
+  bool get hasPhoneNumber {
+    return phoneNumber != null && phoneNumber!.isNotEmpty;
+  }
+
+  // ตรวจสอบว่ามี Facebook หรือไม่
   bool get hasFacebook {
     return facebook != null && facebook!.isNotEmpty;
   }
 
-  // เพิ่มฟังก์ชันเช็คว่าเป็นข้อมูลใหม่หรือไม่
+  // ตรวจสอบว่าเป็นข้อมูลใหม่หรือไม่
   bool get isNew {
     return updateAt == null;
+  }
+
+  // ฟังก์ชันสำหรับแสดงชื่อที่เหมาะสม
+  String get displayName {
+    if (hasName) return name!;
+    if (hasLicensePlate) return licensePlateNumber!;
+    return email;
   }
 }

@@ -26,6 +26,9 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   bool _isScanning = false;
   UserModel? _currentUser;
 
+  // เพิ่มตัวแปรเพื่อ track ฟิลด์ที่ถูกลบ
+  Set<String> _deletedFields = {};
+
   @override
   void initState() {
     super.initState();
@@ -62,13 +65,14 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     }
   }
 
-  // ฟังก์ชันลบข้อมูลในแต่ละ field
+  // ฟังก์ชันลบข้อมูลในแต่ละ field - แก้ไขใหม่
   void _clearField(TextEditingController controller, String fieldName) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('ลบข้อมูล'),
-        content: Text('คุณต้องการลบข้อมูล$fieldNameหรือไม่?'),
+        content: Text(
+            'คุณต้องการลบข้อมูล$fieldNameหรือไม่?\n\nข้อมูลจะถูกลบออกจากฐานข้อมูลเมื่อกดบันทึก'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -78,11 +82,31 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
             onPressed: () {
               setState(() {
                 controller.clear();
+
+                // เพิ่มฟิลด์ที่ถูกลบเข้าใน Set
+                switch (fieldName) {
+                  case 'ชื่อ-นามสกุล':
+                    _deletedFields.add('name');
+                    break;
+                  case 'หมายเลขโทรศัพท์':
+                    _deletedFields.add('phoneNumber');
+                    break;
+                  case 'Facebook':
+                    _deletedFields.add('facebook');
+                    break;
+                  case 'ข้อมูลเพิ่มเติม':
+                    _deletedFields.add('additionalInfo');
+                    break;
+                  case 'ป้ายทะเบียน':
+                    _deletedFields.add('licensePlateNumber');
+                    break;
+                }
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('ลบข้อมูล$fieldNameแล้ว'),
+                  content: Text(
+                      'ลบข้อมูล$fieldNameแล้ว (จะถูกลบจากฐานข้อมูลเมื่อบันทึก)'),
                   backgroundColor: Colors.orange,
                 ),
               );
@@ -101,7 +125,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   Future<void> _scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.camera);
-    
+
     if (image != null) {
       _processImage();
     }
@@ -111,7 +135,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   Future<void> _scanFromGallery() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (image != null) {
       _processImage();
     }
@@ -122,25 +146,28 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     setState(() {
       _isScanning = true;
     });
-    
+
     try {
       // จำลองการประมวลผล OCR
       await Future.delayed(const Duration(seconds: 2));
-      
+
       // สุ่มผลลัพธ์ป้ายทะเบียน
       final List<String> demoPlates = [
-        'ขค 5678', 
-        'คง 9999', 
-        '2กข1234', 
+        'ขค 5678',
+        'คง 9999',
+        '2กข1234',
         'บข 4567',
         'นม 8901',
         'สท 2345'
       ];
-      final randomPlate = demoPlates[DateTime.now().millisecond % demoPlates.length];
-      
+      final randomPlate =
+          demoPlates[DateTime.now().millisecond % demoPlates.length];
+
       setState(() {
         _licensePlateController.text = randomPlate;
         _isScanning = false;
+        // ลบออกจาก deleted fields เมื่อสแกนใหม่
+        _deletedFields.remove('licensePlateNumber');
       });
 
       // แสดงข้อความสำเร็จ
@@ -153,12 +180,11 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
           ),
         );
       }
-
     } catch (e) {
       setState(() {
         _isScanning = false;
       });
-      
+
       if (mounted) {
         _showErrorSnackBar('เกิดข้อผิดพลาดในการสแกน: $e');
       }
@@ -202,7 +228,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     );
   }
 
-  // ฟังก์ชันสร้าง TextField พร้อมปุ่มลบ
+  // ฟังก์ชันสร้าง TextField พร้อมปุ่มลบและไฮไลท์
   Widget _buildTextFieldWithDelete({
     required TextEditingController controller,
     required String labelText,
@@ -214,11 +240,11 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     int maxLines = 1,
     String? currentValue,
   }) {
+    bool hasData = controller.text.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
-        // TextField พร้อมปุ่มลบ
         TextField(
           controller: controller,
           decoration: InputDecoration(
@@ -236,39 +262,62 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: hasData
+                ? const Color.fromARGB(255, 215, 236, 255)
+                : Colors.white,
           ),
           keyboardType: keyboardType,
           maxLength: maxLength,
           maxLines: maxLines,
           onChanged: (value) {
-            setState(() {}); // อัปเดต UI เพื่อแสดง/ซ่อนปุ่มลบ
+            setState(() {
+              // ถ้าผู้ใช้พิมพ์ข้อมูลใหม่ ให้ลบออกจาก deletedFields
+              if (value.isNotEmpty) {
+                switch (fieldName) {
+                  case 'ชื่อ-นามสกุล':
+                    _deletedFields.remove('name');
+                    break;
+                  case 'หมายเลขโทรศัพท์':
+                    _deletedFields.remove('phoneNumber');
+                    break;
+                  case 'Facebook':
+                    _deletedFields.remove('facebook');
+                    break;
+                  case 'ข้อมูลเพิ่มเติม':
+                    _deletedFields.remove('additionalInfo');
+                    break;
+                  case 'ป้ายทะเบียน':
+                    _deletedFields.remove('licensePlateNumber');
+                    break;
+                }
+              }
+            });
           },
         ),
       ],
     );
   }
 
+  // แก้ไข _updateProfile() ให้ลบแค่ข้อมูลใน field ไม่ใช่ลบออกทั้ง field
   Future<void> _updateProfile() async {
-    // ตรวจสอบข้อมูลที่กรอก
-    if (_nameController.text.trim().isEmpty) {
-      _showErrorSnackBar('กรุณากรอกชื่อ-นามสกุล');
-      return;
+    // ตรวจสอบเบื้องต้นเฉพาะเรื่องที่สำคัญ
+
+    // ตรวจสอบหมายเลขโทรศัพท์ (ถ้ากรอก)
+    if (_phoneController.text.trim().isNotEmpty) {
+      final phoneNumber = _phoneController.text.trim();
+      if (!RegExp(r'^[0-9]{8,10}$').hasMatch(phoneNumber)) {
+        _showErrorSnackBar('หมายเลขโทรศัพท์ต้องเป็นตัวเลข 8-10 หลัก');
+        return;
+      }
     }
 
-    if (_phoneController.text.trim().isEmpty) {
-      _showErrorSnackBar('กรุณากรอกหมายเลขโทรศัพท์');
-      return;
-    }
-
-    if (_phoneController.text.trim().length != 10) {
-      _showErrorSnackBar('หมายเลขโทรศัพท์ต้องมี 10 หลัก');
-      return;
-    }
-
-    if (_licensePlateController.text.trim().isEmpty) {
-      _showErrorSnackBar('กรุณากรอกหมายเลขป้ายทะเบียน');
-      return;
+    // ตรวจสอบป้ายทะเบียน (ถ้ากรอก)
+    if (_licensePlateController.text.trim().isNotEmpty) {
+      final licensePlate = _licensePlateController.text.trim();
+      if (licensePlate.length < 2 || licensePlate.length > 8) {
+        _showErrorSnackBar('ป้ายทะเบียนต้องมีความยาว 2-8 ตัวอักษร');
+        return;
+      }
     }
 
     setState(() {
@@ -280,32 +329,70 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
       print('Current UID: $uid');
 
       if (uid != null) {
-        print('Updating profile with data:');
-        print('Name: ${_nameController.text.trim()}');
-        print('Phone: ${_phoneController.text.trim()}');
-        print('License Plate: ${_licensePlateController.text.trim()}');
-        print('Facebook: ${_facebookController.text.trim()}');
-        print('Additional Info: ${_additionalInfoController.text.trim()}');
+        // เตรียมข้อมูลที่จะอัปเดต
+        final Map<String, dynamic> updateData = {};
 
-        await _databaseService.updateUserProfile(
+        // เพิ่มข้อมูลที่มีการกรอก
+        if (_nameController.text.trim().isNotEmpty) {
+          updateData['name'] = _nameController.text.trim();
+          _deletedFields
+              .remove('name'); // ลบออกจาก deleted fields ถ้ามีข้อมูลใหม่
+        }
+
+        if (_phoneController.text.trim().isNotEmpty) {
+          updateData['phoneNumber'] = _phoneController.text.trim();
+          _deletedFields.remove('phoneNumber');
+        }
+
+        if (_licensePlateController.text.trim().isNotEmpty) {
+          updateData['licensePlateNumber'] =
+              _licensePlateController.text.trim();
+          _deletedFields.remove('licensePlateNumber');
+        }
+
+        if (_facebookController.text.trim().isNotEmpty) {
+          updateData['facebook'] = _facebookController.text.trim();
+          _deletedFields.remove('facebook');
+        }
+
+        if (_additionalInfoController.text.trim().isNotEmpty) {
+          updateData['additionalInfo'] = _additionalInfoController.text.trim();
+          _deletedFields.remove('additionalInfo');
+        }
+
+        // เพิ่มฟิลด์ที่ถูกลบเป็น empty string เพื่อลบข้อมูลแต่เก็บ field ไว้
+        for (String deletedField in _deletedFields) {
+          updateData[deletedField] = ''; // ส่ง empty string แทน null
+        }
+
+        print('Updating profile with data: $updateData');
+        print('Deleted fields: $_deletedFields');
+
+        // ใช้ method ที่รองรับการลบข้อมูล
+        await _databaseService.updateUserProfileFlexible(
           uid: uid,
-          name: _nameController.text.trim(),
-          phoneNumber: _phoneController.text.trim(),
-          licensePlateNumber: _licensePlateController.text.trim(),
-          facebook: _facebookController.text.trim().isEmpty
-              ? null
-              : _facebookController.text.trim(),
-          additionalInfo: _additionalInfoController.text.trim().isEmpty
-              ? null
-              : _additionalInfoController.text.trim(),
+          updateData: updateData,
         );
 
         print('Profile updated successfully');
 
         if (mounted) {
+          // นับจำนวนฟิลด์ที่มีการเปลี่ยนแปลง
+          final changedFields =
+              updateData.keys.where((key) => updateData[key] != '').length;
+          final deletedCount = _deletedFields.length;
+
+          String successMessage = 'อัปเดตข้อมูลสำเร็จ';
+          if (changedFields > 0 || deletedCount > 0) {
+            List<String> parts = [];
+            if (changedFields > 0) parts.add('แก้ไข $changedFields รายการ');
+            if (deletedCount > 0) parts.add('ลบ $deletedCount รายการ');
+            successMessage += ' (${parts.join(', ')})';
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('อัปเดตข้อมูลสำเร็จ'),
+            SnackBar(
+              content: Text(successMessage),
               backgroundColor: Colors.green,
             ),
           );
@@ -369,7 +456,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'กรุณากรอกข้อมูลเพื่อแก้ไขข้อมูล',
+                'กรอกเฉพาะข้อมูลที่ต้องการแก้ไข',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -485,12 +572,15 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // License Plate Display
+                  // License Plate Display พร้อมไฮไลท์
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      // ไฮไลท์ช่องเลขป้ายทะเบียน
+                      color: _licensePlateController.text.isNotEmpty
+                          ? const Color.fromARGB(255, 215, 236, 255)
+                          : Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey[300]!),
                     ),
@@ -516,23 +606,25 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                             const Spacer(),
                             if (_licensePlateController.text.isNotEmpty)
                               IconButton(
-                                icon: Icon(Icons.clear, color: Colors.red[400], size: 20),
-                                onPressed: () => _clearField(_licensePlateController, 'ป้ายทะเบียน'),
+                                icon: Icon(Icons.clear,
+                                    color: Colors.red[400], size: 20),
+                                onPressed: () => _clearField(
+                                    _licensePlateController, 'ป้ายทะเบียน'),
                                 tooltip: 'ลบป้ายทะเบียน',
                               ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _licensePlateController.text.isEmpty 
-                            ? 'ยังไม่ได้ระบุป้ายทะเบียนใหม่' 
-                            : _licensePlateController.text,
+                          _licensePlateController.text.isEmpty
+                              ? 'ยังไม่ได้ระบุป้ายทะเบียน'
+                              : _licensePlateController.text,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: _licensePlateController.text.isEmpty 
-                              ? Colors.grey[500] 
-                              : Colors.black87,
+                            color: _licensePlateController.text.isEmpty
+                                ? Colors.grey[500]
+                                : Colors.black87,
                           ),
                         ),
                       ],
@@ -549,23 +641,22 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: _isScanning ? null : _showScanOptions,
-                  icon: _isScanning 
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  icon: _isScanning
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Icon(
+                          Icons.qr_code_scanner,
+                          color: Colors.white,
                         ),
-                      )
-                    : Icon(
-                        Icons.qr_code_scanner,
-                        color: Colors.white,
-                      ),
                   label: Text(
-                    _isScanning 
-                      ? 'กำลังสแกน...' 
-                      : 'สแกนป้ายทะเบียน',
+                    _isScanning ? 'กำลังสแกน...' : 'สแกนป้ายทะเบียน',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -573,7 +664,8 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isScanning ? Colors.grey[400] : Colors.orange[600],
+                    backgroundColor:
+                        _isScanning ? Colors.grey[400] : Colors.orange[600],
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -620,7 +712,8 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: (_isLoading || _isScanning) ? null : _onUpdatePressed,
+                  onPressed:
+                      (_isLoading || _isScanning) ? null : _onUpdatePressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue[700],
                     shape: RoundedRectangleBorder(
@@ -629,7 +722,8 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         )
                       : const Text(
                           'บันทึกข้อมูล',
@@ -648,9 +742,9 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green[50],
+                  color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green[200]!),
+                  border: Border.all(color: Colors.blue[200]!),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,16 +752,16 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     Row(
                       children: [
                         Icon(
-                          Icons.info_outline,
+                          Icons.tips_and_updates_outlined,
                           size: 20,
-                          color: Colors.green[700],
+                          color: Colors.blue[700],
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'สรุปการเปลี่ยนแปลง',
+                          'วิธีการใช้งาน',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.green[700],
+                            color: Colors.blue[700],
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -675,12 +769,14 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '• แก้ไขข้อมูลในช่องที่ต้องการเปลี่ยน\n'
-                      '• ใช้ปุ่ม ❌ เพื่อลบข้อมูลในแต่ละช่อง\n'
+                      '• ช่องที่มีข้อมูลจะไฮไลท์เป็นสีฟ้าอ่อน\n'
+                      '• กรอกเฉพาะข้อมูลที่ต้องการเปลี่ยนแปลง\n'
+                      '• ใช้ปุ่ม ❌ เพื่อลบข้อมูลออกจากฐานข้อมูล\n'
+                      '• ไม่จำเป็นต้องกรอกทุกช่อง สามารถบันทึกได้ทันที\n'
                       '• กดปุ่ม "บันทึกข้อมูล" เพื่อยืนยันการเปลี่ยนแปลง',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.green[700],
+                        color: Colors.blue[700],
                       ),
                     ),
                   ],

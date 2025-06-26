@@ -109,7 +109,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         const SizedBox(height: 12),
                         _buildInfoRow('เจ้าของ', _vehicleOwner!.name ?? 'ไม่ระบุ'),
                         _buildInfoRow('อีเมล', _vehicleOwner!.email),
-                        _buildInfoRow('โทรศัพท์', _vehicleOwner!.phoneNumber),
+                        _buildInfoRow('โทรศัพท์', _vehicleOwner!.phoneNumber!),
                         if (_vehicleOwner!.facebook != null)
                           _buildInfoRow('Facebook', _vehicleOwner!.facebook!),
                         if (_vehicleOwner!.additionalInfo != null)
@@ -179,7 +179,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.phone),
-              title: Text(_vehicleOwner!.phoneNumber),
+              title: Text(_vehicleOwner!.phoneNumber!),
               onTap: () {
                 // TODO: Implement phone call
                 Navigator.pop(context);
