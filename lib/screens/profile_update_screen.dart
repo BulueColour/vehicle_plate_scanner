@@ -292,15 +292,15 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     );
   }
 
-  // แก้ไข _updateProfile() ให้ลบแค่ข้อมูลใน field ไม่ใช่ลบออกทั้ง field
+  // _updateProfile() ลบแค่ข้อมูลใน field ไม่ใช่ลบออกทั้ง field
   Future<void> _updateProfile() async {
-    // ตรวจสอบเบื้องต้นเฉพาะเรื่องที่สำคัญ
+    // ตรวจสอบเฉพาะเรื่องที่สำคัญ
 
     // ตรวจสอบหมายเลขโทรศัพท์ (ถ้ากรอก)
     if (_phoneController.text.trim().isNotEmpty) {
       final phoneNumber = _phoneController.text.trim();
-      if (!RegExp(r'^[0-9]{8,10}$').hasMatch(phoneNumber)) {
-        _showErrorSnackBar('หมายเลขโทรศัพท์ต้องเป็นตัวเลข 8-10 หลัก');
+      if (!RegExp(r'^[0-9]{10}$').hasMatch(phoneNumber)) {
+        _showErrorSnackBar('หมายเลขโทรศัพท์ต้องเป็นตัวเลข 10 หลัก');
         return;
       }
     }
@@ -467,15 +467,15 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Color.fromARGB(255, 215, 236, 255),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(color: Colors.black87!),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.email_outlined,
-                          color: Colors.grey[600],
+                          color: const Color.fromARGB(255, 73, 73, 73), // Icon email
                           size: 20,
                         ),
                         const SizedBox(width: 12),
@@ -487,7 +487,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                                 'อีเมล (ไม่สามารถแก้ไขได้)',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: const Color.fromARGB(221, 71, 71, 71),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -497,7 +497,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                                  color: const Color.fromARGB(221, 33, 33, 33),
                                 ),
                               ),
                             ],
@@ -576,7 +576,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                           ? const Color.fromARGB(255, 215, 236, 255)
                           : Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(color: Colors.black87!),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,7 +586,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                           'หมายเลขป้ายทะเบียน',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: Colors.black87,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -597,7 +597,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                             // ไอคอนรถ
                             Icon(
                               Icons.directions_car,
-                              color: Colors.grey[600],
+                              color: const Color.fromARGB(255, 79, 78, 78),
                               size: 20,
                             ),
                             const SizedBox(width: 12),
@@ -666,7 +666,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                 ],
               ),
 
-              // Scanner Note - ปรับปรุงให้สวยขึ้น
+              // Scanner Note
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(12),
