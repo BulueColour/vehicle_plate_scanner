@@ -26,7 +26,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   bool _isScanning = false;
   UserModel? _currentUser;
 
-  // เพิ่มตัวแปรเพื่อ track ฟิลด์ที่ถูกลบ
+  // เพิ่มตัวแปรเพื่อ track ฟิลด์ที่ถูกลบ (ไม่รวมป้ายทะเบียน)
   Set<String> _deletedFields = {};
 
   @override
@@ -65,7 +65,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     }
   }
 
-  // ฟังก์ชันลบข้อมูลในแต่ละ field - แก้ไขใหม่
+  // ฟังก์ชันลบข้อมูลในแต่ละ field (ไม่รวมป้ายทะเบียน)
   void _clearField(TextEditingController controller, String fieldName) {
     showDialog(
       context: context,
@@ -83,7 +83,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
               setState(() {
                 controller.clear();
 
-                // เพิ่มฟิลด์ที่ถูกลบเข้าใน Set
+                // เพิ่มฟิลด์ที่ถูกลบเข้าใน Set (ไม่รวมป้ายทะเบียน)
                 switch (fieldName) {
                   case 'ชื่อ-นามสกุล':
                     _deletedFields.add('name');
@@ -97,9 +97,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                   case 'ข้อมูลเพิ่มเติม':
                     _deletedFields.add('additionalInfo');
                     break;
-                  case 'ป้ายทะเบียน':
-                    _deletedFields.add('licensePlateNumber');
-                    break;
+                  // ไม่มี case สำหรับป้ายทะเบียน
                 }
               });
               Navigator.pop(context);
@@ -166,8 +164,6 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
       setState(() {
         _licensePlateController.text = randomPlate;
         _isScanning = false;
-        // ลบออกจาก deleted fields เมื่อสแกนใหม่
-        _deletedFields.remove('licensePlateNumber');
       });
 
       // แสดงข้อความสำเร็จ
@@ -248,7 +244,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: labelText,
+            labelText: labelText, // คืน labelText กลับมา
             hintText: hintText,
             prefixIcon: Icon(prefixIcon),
             suffixIcon: controller.text.isNotEmpty
@@ -286,9 +282,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                   case 'ข้อมูลเพิ่มเติม':
                     _deletedFields.remove('additionalInfo');
                     break;
-                  case 'ป้ายทะเบียน':
-                    _deletedFields.remove('licensePlateNumber');
-                    break;
+                  // ไม่มี case สำหรับป้ายทะเบียน
                 }
               }
             });
@@ -344,10 +338,10 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
           _deletedFields.remove('phoneNumber');
         }
 
+        // ป้ายทะเบียนจะอัปเดตเฉพาะเมื่อมีการสแกนเท่านั้น
         if (_licensePlateController.text.trim().isNotEmpty) {
           updateData['licensePlateNumber'] =
               _licensePlateController.text.trim();
-          _deletedFields.remove('licensePlateNumber');
         }
 
         if (_facebookController.text.trim().isNotEmpty) {
@@ -360,7 +354,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
           _deletedFields.remove('additionalInfo');
         }
 
-        // เพิ่มฟิลด์ที่ถูกลบเป็น empty string เพื่อลบข้อมูลแต่เก็บ field ไว้
+        // เพิ่มฟิลด์ที่ถูกลบเป็น empty string (ไม่รวมป้ายทะเบียน)
         for (String deletedField in _deletedFields) {
           updateData[deletedField] = ''; // ส่ง empty string แทน null
         }
@@ -477,34 +471,36 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey[300]!),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.email_outlined,
-                              color: Colors.grey[600],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'อีเมล (ไม่สามารถแก้ไขได้)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          Icons.email_outlined,
+                          color: Colors.grey[600],
+                          size: 20,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _currentUser?.email ?? 'ไม่ระบุ',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'อีเมล (ไม่สามารถแก้ไขได้)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _currentUser?.email ?? 'ไม่ระบุ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -572,12 +568,10 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // License Plate Display พร้อมไฮไลท์
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      // ไฮไลท์ช่องเลขป้ายทะเบียน
                       color: _licensePlateController.text.isNotEmpty
                           ? const Color.fromARGB(255, 215, 236, 255)
                           : Colors.grey[50],
@@ -587,45 +581,84 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Label ด้านบน
+                        Text(
+                          'หมายเลขป้ายทะเบียน',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        
                         Row(
                           children: [
+                            // ไอคอนรถ
                             Icon(
                               Icons.directions_car,
                               color: Colors.grey[600],
                               size: 20,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'หมายเลขป้ายทะเบียน',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
+                            const SizedBox(width: 12),
+                            
+                            // ป้ายทะเบียนชิดซ้าย
+                            Expanded(
+                              child: Text(
+                                _licensePlateController.text.isEmpty
+                                    ? 'ยังไม่ได้ระบุป้ายทะเบียน'
+                                    : _licensePlateController.text,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _licensePlateController.text.isEmpty
+                                      ? Colors.grey[500]
+                                      : Colors.black87,
+                                ),
                               ),
                             ),
-                            const Spacer(),
-                            if (_licensePlateController.text.isNotEmpty)
-                              IconButton(
-                                icon: Icon(Icons.clear,
-                                    color: Colors.red[400], size: 20),
-                                onPressed: () => _clearField(
-                                    _licensePlateController, 'ป้ายทะเบียน'),
-                                tooltip: 'ลบป้ายทะเบียน',
+
+                            const SizedBox(width: 12),
+
+                            // ปุ่มสแกนทางขวา
+                            SizedBox(
+                              width: 180,
+                              height: 42,
+                              child: ElevatedButton.icon(
+                                onPressed: _isScanning ? null : _showScanOptions,
+                                icon: _isScanning
+                                    ? SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.qr_code_scanner,
+                                        size: 20,
+                                        color: Colors.white,
+                                      ),
+                                label: Text(
+                                  _isScanning ? 'กำลังสแกน...' : 'สแกนป้ายทะเบียน',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _isScanning ? Colors.grey[400] : Colors.orange[600],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: _isScanning ? 0 : 3,
+                                  shadowColor: Colors.orange[200],
+                                ),
                               ),
+                            ),
                           ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _licensePlateController.text.isEmpty
-                              ? 'ยังไม่ได้ระบุป้ายทะเบียน'
-                              : _licensePlateController.text,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _licensePlateController.text.isEmpty
-                                ? Colors.grey[500]
-                                : Colors.black87,
-                          ),
                         ),
                       ],
                     ),
@@ -633,72 +666,52 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                 ],
               ),
 
-              const SizedBox(height: 12),
-
-              // License Plate Scanner Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _isScanning ? null : _showScanOptions,
-                  icon: _isScanning
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white,
-                        ),
-                  label: Text(
-                    _isScanning ? 'กำลังสแกน...' : 'สแกนป้ายทะเบียน',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        _isScanning ? Colors.grey[400] : Colors.orange[600],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: _isScanning ? 0 : 2,
-                  ),
-                ),
-              ),
-
-              // Scanner Note
+              // Scanner Note - ปรับปรุงให้สวยขึ้น
               Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange[200]!, width: 1.5),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: Colors.orange[700],
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Colors.orange[700],
+                      ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        'การเปลี่ยนป้ายทะเบียนทำได้เฉพาะการสแกนเท่านั้น',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange[700],
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'หมายเหตุ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.orange[800],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'ป้ายทะเบียนสามารถเปลี่ยนได้เฉพาะการสแกนเท่านั้น ไม่สามารถลบได้',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[700],
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -771,7 +784,8 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     Text(
                       '• ช่องที่มีข้อมูลจะไฮไลท์เป็นสีฟ้าอ่อน\n'
                       '• กรอกเฉพาะข้อมูลที่ต้องการเปลี่ยนแปลง\n'
-                      '• ใช้ปุ่ม ❌ เพื่อลบข้อมูลออกจากฐานข้อมูล\n'
+                      '• ใช้ปุ่ม ❌ เพื่อลบข้อมูลออกจากฐานข้อมูล (ยกเว้นป้ายทะเบียน)\n'
+                      '• กดปุ่ม "สแกน" ข้างป้ายทะเบียนเพื่อเปลี่ยนหมายเลข\n'
                       '• ไม่จำเป็นต้องกรอกทุกช่อง สามารถบันทึกได้ทันที\n'
                       '• กดปุ่ม "บันทึกข้อมูล" เพื่อยืนยันการเปลี่ยนแปลง',
                       style: TextStyle(

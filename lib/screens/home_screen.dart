@@ -24,16 +24,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadUserData() async {
+    setState(() {
+      _isLoading = true; // แสดง loading indicator
+    });
+
     try {
       final firebaseUser = _authService.currentUser;
       if (firebaseUser != null) {
+        print('Loading user data for UID: ${firebaseUser.uid}'); // Debug log
         final userData = await _databaseService.getUser(firebaseUser.uid);
+        print('Loaded user data: ${userData?.toMap()}'); // Debug log
+        
         setState(() {
           _currentUser = userData;
           _isLoading = false;
         });
       }
     } catch (e) {
+      print('Error loading user data: $e'); // Debug log
       setState(() {
         _isLoading = false;
       });
@@ -45,6 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       }
+    }
+  }
+
+  // เพิ่มฟังก์ชันสำหรับไปหน้าแก้ไขโปรไฟล์
+  Future<void> _navigateToProfileUpdate() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProfileUpdateScreen(),
+      ),
+    );
+    
+    // ถ้าแก้ไขข้อมูลสำเร็จ ให้โหลดข้อมูลใหม่
+    if (result == true) {
+      print('Profile updated, reloading user data...'); // Debug log
+      await _loadUserData();
     }
   }
 
@@ -95,6 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
+          // เพิ่มปุ่มรีเฟรชข้อมูล
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadUserData,
+            tooltip: 'รีเฟรชข้อมูล',
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
@@ -250,16 +280,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Profile Card
+                  // Profile Card - แก้ไขให้ใช้ฟังก์ชันใหม่
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: InkWell(
-                      onTap: () {
-                        _showProfileDialog();
-                      },
+                      onTap: _navigateToProfileUpdate, // ใช้ฟังก์ชันใหม่
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.all(24),
@@ -438,23 +466,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Divider(),
                   const SizedBox(height: 8),
                   
-                  // ปุ่มแก้ไขข้อมูล
+                  // ปุ่มแก้ไขข้อมูล - แก้ไขให้ใช้ฟังก์ชันใหม่
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         Navigator.pop(context); // ปิด dialog ปัจจุบัน
-                        // นำทางไปหน้าแก้ไขข้อมูล
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileUpdateScreen(),
-                          ),
-                        );
-                        // ถ้าแก้ไขข้อมูลสำเร็จ ให้โหลดข้อมูลใหม่
-                        if (result == true) {
-                          _loadUserData();
-                        }
+                        await _navigateToProfileUpdate(); // ใช้ฟังก์ชันใหม่
                       },
                       icon: const Icon(Icons.edit),
                       label: const Text('แก้ไขข้อมูล'),
