@@ -1,4 +1,4 @@
-// นี่คือ Version ก่อนทำ backend ถือว่าเป็น Checkpoint
+// เอาใหม่ นี่เป็น checkpoint ก่อนลุย backend
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
