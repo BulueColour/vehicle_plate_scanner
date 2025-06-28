@@ -239,6 +239,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     String? currentValue,
   }) {
     bool hasData = controller.text.isNotEmpty;
+    bool isEmpty = controller.text.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +247,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         TextField(
           controller: controller,
           decoration: InputDecoration(
-            labelText: labelText, // คืน labelText กลับมา
+            labelText: labelText,
             hintText: hintText,
             prefixIcon: Icon(prefixIcon),
             suffixIcon: controller.text.isNotEmpty
@@ -256,13 +257,41 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     tooltip: 'ลบข้อมูล$fieldName',
                   )
                 : null,
-            border: OutlineInputBorder(
+            // กำหนดสีขอบตามสถานะ: ว่าง = สีดำ, มีข้อมูล = สีเทา
+            enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isEmpty ? const Color.fromARGB(255, 117, 117, 117) : Colors.grey[300]!,
+                width: isEmpty ? 1.7 : 1.0,
               ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isEmpty ? const Color.fromARGB(255, 117, 117, 117) : Colors.blue[400]!,
+                width: 2.0,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.red[400]!,
+                width: 1.0,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.red[400]!,
+                width: 2.0,
+              ),
+            ),
             filled: true,
-            fillColor: hasData // ถ้าข้อมูลจะไ
-                ? const Color.fromARGB(255, 215, 236, 255)
-                : Colors.white,
+            fillColor: hasData // ไฮไล้ทภายใน TextField
+                ? const Color.fromARGB(255, 215, 236, 255)  // สีฟ้าอ่อนเมื่อมีข้อมูล
+                : isEmpty 
+                    ? const Color.fromARGB(255, 255, 255, 255)  // สีเหลืองอ่อนเมื่อว่าง (ไฮไลท์)
+                    : Colors.white,  // สีขาวปกติ
           ),
           keyboardType: keyboardType,
           maxLength: maxLength,
@@ -477,7 +506,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                       children: [
                         Icon(
                           Icons.email_outlined,
-                          color: const Color.fromARGB(255, 73, 73, 73), // Icon email
+                          color: const Color.fromARGB(255, 73, 73, 73),
                           size: 20,
                         ),
                         const SizedBox(width: 12),
