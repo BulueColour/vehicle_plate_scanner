@@ -258,9 +258,9 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                 : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-            ),
+              ),
             filled: true,
-            fillColor: hasData
+            fillColor: hasData // ถ้าข้อมูลจะไ
                 ? const Color.fromARGB(255, 215, 236, 255)
                 : Colors.white,
           ),
@@ -471,7 +471,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     decoration: BoxDecoration(
                       color: Color.fromARGB(255, 215, 236, 255),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black87!),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: Row(
                       children: [
@@ -578,7 +578,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                           ? const Color.fromARGB(255, 215, 236, 255)
                           : Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black87!),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
