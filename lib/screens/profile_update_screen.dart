@@ -1,11 +1,11 @@
+// นี่คือ Version ก่อนทำ backend ถือว่าเป็น Checkpoint
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
-// นี่ควรจะเป็น lastest version
-// แล้วถ้าทำแบบนี้ด้วยล่ะ นี่จะเป็น lastest version นะ ไม่ใช่อันบน
 
 class ProfileUpdateScreen extends StatefulWidget {
   const ProfileUpdateScreen({Key? key}) : super(key: key);
