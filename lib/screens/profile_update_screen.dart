@@ -28,7 +28,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   bool _isScanning = false;
   UserModel? _currentUser;
 
-  // เพิ่มตัวแปรเพื่อ track ฟิลด์ที่ถูกลบ (ไม่รวมป้ายทะเบียน)
+  // เพิ่มตัวแปรเพื่อ track ฟิลด์ที่ถูกลบจะได้เก็บไปใช้ได้ (ไม่รวมป้ายทะเบียน)
   Set<String> _deletedFields = {};
 
   @override
@@ -141,7 +141,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     }
   }
 
-  // ฟังก์ชันประมวลผลภาพ (จำลอง)
+  // ฟังก์ชันประมวลผลภาพ (ยังเป็นชุดข้อมูลตัวอย่างอยู่)
   void _processImage() async {
     setState(() {
       _isScanning = true;
@@ -226,7 +226,8 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     );
   }
 
-  // ฟังก์ชันสร้าง TextField พร้อมปุ่มลบและไฮไลท์
+  // ฟังก์ชันที่ใช้สร้าง TextField ของปุ่มที่เปลี่ยนข้อมูลได้ (ชื่อนามสกุล เบอร์ facebook ข้อมูลเพิ่มเติม) 
+  // แก้ได้ตรงนี้ (สร้างไว้แล้วเรียกใช้ตอนจะสร้างฟิลด์ใดๆ)
   Widget _buildTextFieldWithDelete({
     required TextEditingController controller,
     required String labelText,
@@ -323,11 +324,10 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     );
   }
 
-  // _updateProfile() ลบแค่ข้อมูลใน field ไม่ใช่ลบออกทั้ง field
+  // ลบแค่ข้อมูลใน field ไม่ใช่ทั้ง field
   Future<void> _updateProfile() async {
-    // ตรวจสอบเฉพาะเรื่องที่สำคัญ
 
-    // ตรวจสอบหมายเลขโทรศัพท์ (ถ้ากรอก)
+    // ตรวจสอบหมายเลขโทรศัพท์ (ถ้าเปลี่ยน)
     if (_phoneController.text.trim().isNotEmpty) {
       final phoneNumber = _phoneController.text.trim();
       if (!RegExp(r'^[0-9]{10}$').hasMatch(phoneNumber)) {
@@ -336,7 +336,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
       }
     }
 
-    // ตรวจสอบป้ายทะเบียน (ถ้ากรอก)
+    // ตรวจสอบป้ายทะเบียน (ถ้าเปลี่ยน)
     if (_licensePlateController.text.trim().isNotEmpty) {
       final licensePlate = _licensePlateController.text.trim();
       if (licensePlate.length < 2 || licensePlate.length > 8) {
@@ -369,7 +369,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
           _deletedFields.remove('phoneNumber');
         }
 
-        // ป้ายทะเบียนจะอัปเดตเฉพาะเมื่อมีการสแกนเท่านั้น
+        // ป้ายทะเบียนจะอัปเดตเฉพาะตอนมีการสแกน
         if (_licensePlateController.text.trim().isNotEmpty) {
           updateData['licensePlateNumber'] =
               _licensePlateController.text.trim();
@@ -387,13 +387,13 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
 
         // เพิ่มฟิลด์ที่ถูกลบเป็น empty string (ไม่รวมป้ายทะเบียน)
         for (String deletedField in _deletedFields) {
-          updateData[deletedField] = ''; // ส่ง empty string แทน null
+          updateData[deletedField] = ''; // ส่ง empty string ไปที่ database
         }
 
         print('Updating profile with data: $updateData');
         print('Deleted fields: $_deletedFields');
 
-        // ใช้ method ที่รองรับการลบข้อมูล
+
         await _databaseService.updateUserProfileFlexible(
           uid: uid,
           updateData: updateData,
