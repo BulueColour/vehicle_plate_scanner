@@ -259,13 +259,13 @@ class DatabaseService {
       // Search by license plate number
       QuerySnapshot plateQuery = await _usersCollection
           .where('license_plate_number', isGreaterThanOrEqualTo: searchTerm)
-          .where('license_plate_number', isLessThan: searchTerm + '\uf8ff')
+          .where('license_plate_number', isLessThan: '$searchTerm\uf8ff')
           .get();
 
       // Search by name (if exists)
       QuerySnapshot nameQuery = await _usersCollection
           .where('name', isGreaterThanOrEqualTo: searchTerm)
-          .where('name', isLessThan: searchTerm + '\uf8ff')
+          .where('name', isLessThan: '$searchTerm\uf8ff')
           .get();
 
       // Combine results and remove duplicates
