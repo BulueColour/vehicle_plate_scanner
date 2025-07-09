@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../widgets/custom_button.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/license_plate_recognition_service.dart'; // เพิ่มบรรทัดนี้
 import '../models/user_model.dart';
 
 class PlateRegistrationScreen extends StatefulWidget {
@@ -19,11 +21,11 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
   bool _isScanning = false;
   String? _plateNumber;
   Map<String, dynamic>? _userData;
+  File? _selectedImage; // เพิ่มตัวแปรนี้
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // รับข้อมูลที่ส่งมาจากหน้า register
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       _userData = args;
@@ -32,36 +34,172 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
 
   Future<void> _scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      preferredCameraDevice: CameraDevice.rear,
+    );
     
     if (image != null) {
-      _processImage();
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+      await _processImage();
     }
   }
 
   Future<void> _scanFromGallery() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     
     if (image != null) {
-      _processImage();
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+      await _processImage();
     }
   }
 
-  void _processImage() {
-    setState(() => _isScanning = true);
-    
-    // Demo: จำลองการประมวลผล OCR
-    Future.delayed(const Duration(seconds: 3), () {
+  // แทนที่ method _processImage() เดิมด้วยโค้ดนี้
+  Future<void> _processImage() async {
+    if (_selectedImage == null) return;
+
+    setState(() {
+      _isScanning = true;
+      _plateNumber = null;
+    });
+
+    try {
+      // ตรวจสอบการเชื่อมต่อ API ก่อน
+      bool apiHealthy = await LicensePlateRecognitionService.checkApiHealth();
+      if (!apiHealthy) {
+        throw Exception('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+      }
+
+      // เรียก API เพื่อตรวจจับป้ายทะเบียน
+      Map<String, dynamic> result = await LicensePlateRecognitionService.detectLicensePlate(_selectedImage!);
+      
+      if (result['success'] == true && result['license_plate'] != null) {
+        String detectedPlate = result['license_plate'].toString();
+        String cleanedPlate = LicensePlateRecognitionService.cleanLicensePlateText(detectedPlate);
+        
+        if (cleanedPlate.isNotEmpty) {
+          setState(() {
+            _plateNumber = cleanedPlate;
+          });
+          
+          _showDetectionResult(cleanedPlate, result['confidence'] ?? 0.0);
+        } else {
+          throw Exception('ไม่สามารถอ่านป้ายทะเบียนได้ กรุณาถ่ายภาพใหม่');
+        }
+      } else {
+        String errorMessage = result['message'] ?? 'ไม่พบป้ายทะเบียนในภาพ';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      _showErrorDialog('เกิดข้อผิดพลาด: $e');
+    } finally {
       setState(() {
         _isScanning = false;
-        // Demo: สุ่มผลลัพธ์
-        final List<String> demoPlates = ['กข 1234', 'ขค 5678', 'คง 9999', 'งจ 7777'];
-        _plateNumber = demoPlates[DateTime.now().millisecond % demoPlates.length];
       });
-    });
+    }
   }
 
+  // เพิ่ม method ใหม่สำหรับแสดงผลลัพธ์
+  void _showDetectionResult(String plateNumber, double confidence) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green[600]),
+            const SizedBox(width: 8),
+            const Text('พบป้ายทะเบียน'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    plateNumber,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ความมั่นใจ: ${(confidence * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('ป้ายทะเบียนถูกต้องหรือไม่?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _plateNumber = null;
+                _selectedImage = null;
+              });
+            },
+            child: const Text('ถ่ายใหม่'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('ถูกต้อง'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red[600]),
+            const SizedBox(width: 8),
+            const Text('เกิดข้อผิดพลาด'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ตกลง'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // method อื่นๆ ยังเหมือนเดิม...
   void _completeRegistration() async {
     if (_plateNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,13 +214,13 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
     setState(() => _isScanning = true);
 
     try {
-      // 1. ตรวจสอบว่าป้ายทะเบียนซ้ำหรือไม่
+      // ตรวจสอบว่าป้ายทะเบียนซ้ำหรือไม่
       bool plateExists = await _databaseService.isLicensePlateExists(_plateNumber!);
       if (plateExists) {
         throw 'ป้ายทะเบียน $_plateNumber มีในระบบแล้ว กรุณาใช้ป้ายทะเบียนอื่น';
       }
 
-      // 2. สร้างบัญชี Firebase Auth
+      // สร้างบัญชี Firebase Auth
       final userCredential = await _authService.createUserWithEmailAndPassword(
         _userData!['email'],
         _userData!['password'],
@@ -92,7 +230,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
         throw 'ไม่สามารถสร้างบัญชีได้';
       }
 
-      // 3. สร้างข้อมูลผู้ใช้ใน Firestore
+      // สร้างข้อมูลผู้ใช้ใน Firestore
       UserModel newUser = UserModel(
         uid: userCredential!.user!.uid,
         licensePlateNumber: _plateNumber!,
@@ -103,7 +241,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
 
       await _databaseService.createUser(newUser);
 
-      // 4. แสดงผลสำเร็จ
       setState(() => _isScanning = false);
       
       if (mounted) {
@@ -144,7 +281,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // ปิด dialog
+                  Navigator.pop(context);
                   Navigator.pushNamedAndRemoveUntil(
                     context,
                     '/home',
@@ -260,10 +397,18 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                           ),
                           const SizedBox(height: 20),
                           const Text(
-                            'กำลังประมวลผล...',
+                            'กำลังประมวลผลด้วย AI...',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'YOLO + OCR กำลังทำงาน',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],
@@ -271,20 +416,38 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.camera_alt,
-                            size: 80,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 20),
+                          // แสดงภาพที่เลือกถ้ามี
+                          if (_selectedImage != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _selectedImage!,
+                                height: 150,
+                                width: 250,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ] else ...[
+                            Icon(
+                              Icons.camera_alt,
+                              size: 80,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                          
                           Text(
-                            'กดปุ่มด้านล่างเพื่อสแกนป้ายทะเบียน',
+                            _selectedImage != null 
+                                ? 'ภาพที่เลือก' 
+                                : 'กดปุ่มด้านล่างเพื่อสแกนป้ายทะเบียน',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey[600],
                             ),
                           ),
+                          
                           if (_plateNumber != null) ...[
                             const SizedBox(height: 20),
                             Container(
@@ -358,14 +521,14 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
               child: Row(
                 children: [
                   Icon(
-                    Icons.info_outline,
+                    Icons.psychology,
                     size: 20,
                     color: Colors.amber[700],
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'หมายเหตุ: ป้ายทะเบียนจะใช้เป็น Unique Key ในระบบ',
+                      'ใช้ AI: YOLOv8 + EasyOCR สำหรับป้ายทะเบียนไทย',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.amber[800],
