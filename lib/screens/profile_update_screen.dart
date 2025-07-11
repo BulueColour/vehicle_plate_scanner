@@ -5,10 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
-import '../widgets/custom_button.dart';
+import 'dart:io';
+import '../services/license_plate_recognition_service.dart';
 
 class ProfileUpdateScreen extends StatefulWidget {
-  const ProfileUpdateScreen({Key? key}) : super(key: key);
+  const ProfileUpdateScreen({super.key});
 
   @override
   State<ProfileUpdateScreen> createState() => _ProfileUpdateScreenState();
@@ -29,7 +30,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   UserModel? _currentUser;
 
   // เพิ่มตัวแปรเพื่อ track ฟิลด์ที่ถูกลบจะได้เก็บไปใช้ได้ (ไม่รวมป้ายทะเบียน)
-  Set<String> _deletedFields = {};
+  final Set<String> _deletedFields = {};
 
   @override
   void initState() {
@@ -124,67 +125,238 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   // ฟังก์ชันสแกนจากกล้อง
   Future<void> _scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
 
     if (image != null) {
-      _processImage();
+      File imageFile = File(image.path);
+      _processImage(imageFile);
     }
   }
 
   // ฟังก์ชันสแกนจากคลังภาพ
   Future<void> _scanFromGallery() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
 
     if (image != null) {
-      _processImage();
+      File imageFile = File(image.path);
+      _processImage(imageFile);
     }
   }
 
   // ฟังก์ชันประมวลผลภาพ (ยังเป็นชุดข้อมูลตัวอย่างอยู่)
-  void _processImage() async {
+  void _processImage(File imageFile) async {
     setState(() {
       _isScanning = true;
     });
 
     try {
-      // จำลองการประมวลผล OCR
-      await Future.delayed(const Duration(seconds: 2));
+      print('=== Starting License Plate Detection ===');
+      print('Image file: ${imageFile.path}');
 
-      // สุ่มผลลัพธ์ป้ายทะเบียน
-      final List<String> demoPlates = [
-        'ขค 5678',
-        'คง 9999',
-        '2กข1234',
-        'บข 4567',
-        'นม 8901',
-        'สท 2345'
-      ];
-      final randomPlate =
-          demoPlates[DateTime.now().millisecond % demoPlates.length];
+      // เรียกเข้าใช้ API
+      Map<String, dynamic> result = await LicensePlateRecognitionService.detectLicensePlate(imageFile);
 
-      setState(() {
-        _licensePlateController.text = randomPlate;
-        _isScanning = false;
-      });
+      print('Detection result: $result');
 
-      // แสดงข้อความสำเร็จ
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('สแกนสำเร็จ: $randomPlate'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      if (result['success'] == true && result['license_plate'] != null) {
+        String detectedPlate = result['license_plate'];
+        double confidence = (result['confidence'] ?? 0.0).toDouble();
+
+        setState(() {
+          _licensePlateController.text = detectedPlate;
+          _isScanning = false;
+        });
+
+        // แสดงข้อความว่าสำเร็จ พร้อมกับ confidence score
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size:28),
+                  SizedBox(width: 8),
+                  Text('พบป้ายทะเบียน'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'หมายเลขป้ายทะเบียน:',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 4),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Text(
+                      detectedPlate,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'ความแม่นยำ: ${(confidence * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (confidence < 0.7)
+                  Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      '⚠️ ความแม่นยำ กรุณาตรวจสอบความถูกต้อง',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // ให้ผู้ใช้สแกนใหม่
+                    setState(() {
+                      _licensePlateController.clear();
+                    });
+                  },
+                  child: Text('สแกนใหม่'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('บันทึกป้ายทะเบียน: $detectedPlate'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Text('ยืนยัน'),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        // กรณีไม่พบป้ายทะเบียน
+        setState(() {
+          _isScanning = false;
+        });
+
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.orange, size: 28),
+                  SizedBox(width: 8),
+                  Text('ไม่พบป้ายทะเบียน'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('ไม่สามารถตรวจจับป้ายทะเบียนได้'),
+                  SizedBox(height: 12),
+                  Text(
+                    'Tips:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '• ถ่ายรูปให้ป้ายทะเบียนชัดเจน\n'
+                    '• หลีกเลี่ยงการสะท้อนแสง\n'
+                    '• ถ่ายให้ป้ายทะเบียนอยู่ตรงกลาง\n'
+                    '• ระยะห่างประมาณ 1-2 เมตร',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showScanOptions();
+                  },
+                  child: Text('ลองอีกครั้ง'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } catch (e) {
+      print('Error in _processImage: $e');
       setState(() {
         _isScanning = false;
       });
 
       if (mounted) {
-        _showErrorSnackBar('เกิดข้อผิดพลาดในการสแกน: $e');
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.error, color: Colors.red, size: 28),
+                SizedBox(width: 8),
+                Text('เกิดข้อผิดพลาด'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ไม่สามารถประมวลผลรูปภาพได้'),
+                SizedBox(height: 8),
+                Text(
+                  'รายละเอียด: ${e.toString()}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('ตกลง'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showScanOptions();
+                },
+                child: Text('ลองอีกครั้ง'),
+              ),
+            ],
+          ),
+        );
       }
     }
   }
