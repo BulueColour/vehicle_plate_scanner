@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../widgets/custom_button.dart';
 import '../services/database_service.dart';
+import '../services/license_plate_recognition_service.dart'; // เพิ่มบรรทัดนี้
 import '../models/user_model.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -16,66 +18,255 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool _isScanning = false;
   String? _plateNumber;
   UserModel? _vehicleOwner;
+  File? _selectedImage; // เพิ่มตัวแปรนี้
 
   Future<void> _scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      preferredCameraDevice: CameraDevice.rear,
+    );
     
     if (image != null) {
-      _processImage();
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+      await _processImage();
     }
   }
 
   Future<void> _scanFromGallery() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     
     if (image != null) {
-      _processImage();
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+      await _processImage();
     }
   }
 
-  void _processImage() async {
+  // แทนที่ method _processImage() เดิมด้วยโค้ดใหม่ที่ใช้ YOLOv8 + OCR
+  Future<void> _processImage() async {
+    if (_selectedImage == null) return;
+
     setState(() {
       _isScanning = true;
       _plateNumber = null;
       _vehicleOwner = null;
     });
-    
+
     try {
-      // Demo: จำลองการประมวลผล OCR
-      await Future.delayed(const Duration(seconds: 3));
-      
-      // Demo: สุ่มผลลัพธ์ป้ายทะเบียน
-      final List<String> demoPlates = ['ขค 5678', 'คง 9999'];
-      final randomPlate = demoPlates[DateTime.now().millisecond % demoPlates.length];
-      
-      setState(() {
-        _plateNumber = randomPlate;
-      });
-
-      // ค้นหาข้อมูลจากฐานข้อมูล Firebase
-      final userData = await _databaseService.getUserByLicensePlate(randomPlate);
-      
-      setState(() {
-        _vehicleOwner = userData;
-        _isScanning = false;
-      });
-
-    } catch (e) {
-      setState(() {
-        _isScanning = false;
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('เกิดข้อผิดพลาด: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      // ตรวจสอบการเชื่อมต่อ API ก่อน
+      bool apiHealthy = await LicensePlateRecognitionService.checkApiHealth();
+      if (!apiHealthy) {
+        throw Exception('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
       }
+
+      // เรียก API เพื่อตรวจจับป้ายทะเบียน
+      Map<String, dynamic> result = await LicensePlateRecognitionService.detectLicensePlate(_selectedImage!);
+      
+      if (result['success'] == true && result['license_plate'] != null) {
+        String detectedPlate = result['license_plate'].toString();
+        String cleanedPlate = LicensePlateRecognitionService.cleanLicensePlateText(detectedPlate);
+        
+        if (cleanedPlate.isNotEmpty) {
+          setState(() {
+            _plateNumber = cleanedPlate;
+          });
+          
+          // ค้นหาข้อมูลจากฐานข้อมูล Firebase
+          final userData = await _databaseService.getUserByLicensePlate(cleanedPlate);
+          
+          setState(() {
+            _vehicleOwner = userData;
+          });
+          
+          // แสดงผลลัพธ์ทันที
+          _showDetectionResult(cleanedPlate, result['confidence'] ?? 0.0);
+        } else {
+          throw Exception('ไม่สามารถอ่านป้ายทะเบียนได้ กรุณาถ่ายภาพใหม่');
+        }
+      } else {
+        String errorMessage = result['message'] ?? 'ไม่พบป้ายทะเบียนในภาพ';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      _showErrorDialog('เกิดข้อผิดพลาด: $e');
+    } finally {
+      setState(() {
+        _isScanning = false;
+      });
     }
+  }
+
+  // เพิ่ม method ใหม่สำหรับแสดงผลลัพธ์การตรวจจับ
+  void _showDetectionResult(String plateNumber, double confidence) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              _vehicleOwner != null ? Icons.check_circle : Icons.info_outline,
+              color: _vehicleOwner != null ? Colors.green[600] : Colors.orange[600],
+            ),
+            const SizedBox(width: 8),
+            Text(_vehicleOwner != null ? 'พบข้อมูล' : 'ตรวจจับสำเร็จ'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // แสดงป้ายทะเบียนที่ตรวจจับได้
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    plateNumber,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ความมั่นใจ: ${(confidence * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // แสดงข้อมูลเจ้าของรถ (ถ้ามี)
+            if (_vehicleOwner != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ข้อมูลเจ้าของรถ:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoRow('ชื่อ', _vehicleOwner!.name ?? 'ไม่ระบุ'),
+                    _buildInfoRow('อีเมล', _vehicleOwner!.email),
+                    _buildInfoRow('โทรศัพท์', _vehicleOwner!.phoneNumber!),
+                    if (_vehicleOwner!.facebook != null)
+                      _buildInfoRow('Facebook', _vehicleOwner!.facebook!),
+                    if (_vehicleOwner!.additionalInfo != null)
+                      _buildInfoRow('ข้อมูลเพิ่มเติม', _vehicleOwner!.additionalInfo!),
+                    const SizedBox(height: 8),
+                    Text(
+                      'ลงทะเบียนเมื่อ: ${_formatDate(_vehicleOwner!.createAt)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.search_off,
+                      size: 48,
+                      color: Colors.orange[400],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'ไม่พบข้อมูลป้ายทะเบียนนี้ในระบบ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (_vehicleOwner != null) ...[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showContactOptions();
+              },
+              child: const Text('ติดต่อ'),
+            ),
+          ],
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _resetScan();
+            },
+            child: const Text('สแกนใหม่'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ตกลง'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // เพิ่ม method สำหรับแสดง error dialog
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red[600]),
+            const SizedBox(width: 8),
+            const Text('เกิดข้อผิดพลาด'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ตกลง'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showResultDialog() {
@@ -233,6 +424,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     setState(() {
       _plateNumber = null;
       _vehicleOwner = null;
+      _selectedImage = null;
     });
   }
 
@@ -296,10 +488,18 @@ class _ScannerScreenState extends State<ScannerScreen> {
                           ),
                           const SizedBox(height: 20),
                           const Text(
-                            'กำลังประมวลผลและค้นหาข้อมูล...',
+                            'กำลังประมวลผลด้วย AI...',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'YOLO + OCR กำลังทำงาน',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],
@@ -307,14 +507,31 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.camera_alt,
-                            size: 80,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 20),
+                          // แสดงภาพที่เลือกถ้ามี
+                          if (_selectedImage != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _selectedImage!,
+                                height: 150,
+                                width: 250,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ] else ...[
+                            Icon(
+                              Icons.camera_alt,
+                              size: 80,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                          
                           Text(
-                            'กดปุ่มด้านล่างเพื่อสแกน',
+                            _selectedImage != null 
+                                ? 'ภาพที่เลือก' 
+                                : 'กดปุ่มด้านล่างเพื่อสแกน',
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey[600],
@@ -430,23 +647,23 @@ class _ScannerScreenState extends State<ScannerScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: Colors.amber[50],
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.info_outline,
+                    Icons.psychology,
                     size: 20,
-                    color: Colors.blue[700],
+                    color: Colors.amber[700],
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'ระบบจะค้นหาข้อมูลเจ้าของรถจากฐานข้อมูลด้วยเลขป้ายทะเบียน',
+                      'ใช้ AI: YOLOv8 + EasyOCR สำหรับป้ายทะเบียนไทย',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.blue[700],
+                        color: Colors.amber[800],
                       ),
                     ),
                   ),
