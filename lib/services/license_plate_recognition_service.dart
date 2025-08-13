@@ -11,53 +11,84 @@ class LicensePlateRecognitionService {
   static Future<Map<String, dynamic>> detectLicensePlate(File imageFile) async {
     try {
       print('Using URL: $baseUrl');
-      
-      // ทดสอบ health check ก่อน
+
+      // ตรวจสอบ health check ก่อน
       print('Checking API health...');
       final healthResponse = await http.get(
         Uri.parse('$baseUrl/health'),
       ).timeout(const Duration(seconds: 10));
-      
+
       if (healthResponse.statusCode != 200) {
-        throw Exception('API Health check failed: ${healthResponse.statusCode}');
+        return {
+          'success': false,
+          'message': 'API Health check failed: ${healthResponse.statusCode}',
+          'combined_text': ''
+        };
       }
-      
+
       print('API Health check successful');
-      
+
       // ปรับขนาดรูปภาพ
       File optimizedImage = await _optimizeImage(imageFile);
       print('Image optimized');
-      
+
       // ส่งรูปภาพไป API
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/detect-license-plate'),
       );
-      
+
       request.files.add(
         await http.MultipartFile.fromPath('file', optimizedImage.path),
       );
-      
+
       print('Sending request to API...');
       var response = await request.send().timeout(
         const Duration(seconds: 30),
       );
-      
+
       var responseData = await response.stream.bytesToString();
       print('Response received: ${response.statusCode}');
       print('Response data: $responseData');
-      
+
       if (response.statusCode == 200) {
-        return json.decode(responseData);
+        final decoded = json.decode(responseData);
+
+        // trim combined_text เพื่อเอาช่องว่างหัวท้ายออก
+        if (decoded is Map<String, dynamic> &&
+            decoded.containsKey('combined_text') &&
+            decoded['combined_text'] is String) {
+          decoded['combined_text'] = decoded['combined_text'].trim();
+        }
+
+        // ตรวจสอบ success field จาก API
+        if (decoded is Map<String, dynamic> && decoded.containsKey('success')) {
+          return decoded;
+        } else {
+          return {
+            'success': false,
+            'message': 'Invalid API response format',
+            'combined_text': ''
+          };
+        }
       } else {
-        throw Exception('API Error: ${response.statusCode} - $responseData');
+        return {
+          'success': false,
+          'message': 'API Error: ${response.statusCode} - $responseData',
+          'combined_text': ''
+        };
       }
-      
     } catch (e) {
       print('Error in detectLicensePlate: $e');
-      throw Exception('การตรวจจับป้ายทะเบียนล้มเหลว: $e');
+      return {
+        'success': false,
+        'message': 'การตรวจจับป้ายทะเบียนล้มเหลว: $e',
+        'combined_text': ''
+      };
     }
   }
+
+
   
   static Future<File> _optimizeImage(File imageFile) async {
     try {
