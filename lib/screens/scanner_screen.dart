@@ -71,8 +71,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       // เรียก API เพื่อตรวจจับป้ายทะเบียน
       Map<String, dynamic> result = await LicensePlateRecognitionService.detectLicensePlate(_selectedImage!);
       
-      if (result['success'] == true && result['license_plate'] != null) {
-        String detectedPlate = result['license_plate'].toString();
+      if (result['success'] == true && result['combined_text'] != null) {
+        String detectedPlate = result['combined_text'].toString();
         String cleanedPlate = LicensePlateRecognitionService.cleanLicensePlateText(detectedPlate);
         
         if (cleanedPlate.isNotEmpty) {
@@ -117,75 +117,50 @@ class _ScannerScreenState extends State<ScannerScreen> {
               color: _vehicleOwner != null ? Colors.green[600] : Colors.orange[600],
             ),
             const SizedBox(width: 8),
-            Text(_vehicleOwner != null ? 'พบข้อมูล' : 'ตรวจจับสำเร็จ'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // แสดงป้ายทะเบียนที่ตรวจจับได้
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    plateNumber,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'ความมั่นใจ: ${(confidence * 100).toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+            Expanded(
+              child: Text(
+                _vehicleOwner != null ? 'พบข้อมูล' : 'ตรวจจับสำเร็จ',
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            
-            const SizedBox(height: 16),
-            
-            // แสดงข้อมูลเจ้าของรถ (ถ้ามี)
-            if (_vehicleOwner != null) ...[
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ป้ายทะเบียน
               Container(
-                width: double.infinity,
                 padding: const EdgeInsets.all(16),
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green[200]!),
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'ข้อมูลเจ้าของรถ:',
+                    Text(
+                      'ป้ายทะเบียน',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow('ชื่อ', _vehicleOwner!.name ?? 'ไม่ระบุ'),
-                    _buildInfoRow('อีเมล', _vehicleOwner!.email),
-                    _buildInfoRow('โทรศัพท์', _vehicleOwner!.phoneNumber!),
-                    if (_vehicleOwner!.facebook != null)
-                      _buildInfoRow('Facebook', _vehicleOwner!.facebook!),
-                    if (_vehicleOwner!.additionalInfo != null)
-                      _buildInfoRow('ข้อมูลเพิ่มเติม', _vehicleOwner!.additionalInfo!),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      plateNumber.isNotEmpty ? plateNumber : '-',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 8),
                     Text(
-                      'ลงทะเบียนเมื่อ: ${_formatDate(_vehicleOwner!.createAt)}',
+                      'ความมั่นใจ: ${(confidence * 100).toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -194,31 +169,73 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   ],
                 ),
               ),
-            ] else ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
+              const SizedBox(height: 16),
+              // ข้อมูลเจ้าของรถ
+              if (_vehicleOwner != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ข้อมูลเจ้าของรถ:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInfoRow('ชื่อ', _vehicleOwner!.name ?? 'ไม่ระบุ'),
+                      _buildInfoRow('อีเมล', _vehicleOwner!.email),
+                      _buildInfoRow('โทรศัพท์', _vehicleOwner!.phoneNumber!),
+                      if (_vehicleOwner!.facebook != null)
+                        _buildInfoRow('Facebook', _vehicleOwner!.facebook!),
+                      if (_vehicleOwner!.additionalInfo != null)
+                        _buildInfoRow('ข้อมูลเพิ่มเติม', _vehicleOwner!.additionalInfo!),
+                      const SizedBox(height: 8),
+                      Text(
+                        'ลงทะเบียนเมื่อ: ${_formatDate(_vehicleOwner!.createAt)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.search_off,
-                      size: 48,
-                      color: Colors.orange[400],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'ไม่พบข้อมูลป้ายทะเบียนนี้ในระบบ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 48,
+                        color: Colors.orange[400],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'ไม่พบข้อมูลป้ายทะเบียนนี้ในระบบ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           if (_vehicleOwner != null) ...[
@@ -245,6 +262,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       ),
     );
   }
+
+
 
   // เพิ่ม method สำหรับแสดง error dialog
   void _showErrorDialog(String message) {
@@ -438,11 +457,17 @@ class _ScannerScreenState extends State<ScannerScreen> {
             width: 80,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13),
+            ),
           ),
         ],
       ),
@@ -561,6 +586,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   ),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -573,11 +599,28 @@ class _ScannerScreenState extends State<ScannerScreen> {
                             : Colors.orange[700],
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'ผลการสแกน: $_plateNumber',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        Expanded( // ใช้ Expanded เพื่อให้ข้อความสามารถขึ้นบรรทัดใหม่ได้
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'ผลการสแกน:',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                _plateNumber!,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                ),
+                                maxLines: 2, // อนุญาตสูงสุด 2 บรรทัด
+                                overflow: TextOverflow.visible,
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -591,6 +634,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         color: _vehicleOwner != null 
                           ? Colors.green[800] 
                           : Colors.orange[800],
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 12),
