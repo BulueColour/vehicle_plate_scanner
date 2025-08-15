@@ -82,16 +82,15 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       // เรียก API เพื่อตรวจจับป้ายทะเบียน
       Map<String, dynamic> result = await LicensePlateRecognitionService.detectLicensePlate(_selectedImage!);
       
-      if (result['success'] == true && result['license_plate'] != null) {
-        String detectedPlate = result['license_plate'].toString();
-        String cleanedPlate = LicensePlateRecognitionService.cleanLicensePlateText(detectedPlate);
+      if (result['success'] == true && result['combined_text'] != null) {
+        String detectedPlate = result['combined_text'].toString();
         
-        if (cleanedPlate.isNotEmpty) {
+        if (detectedPlate.isNotEmpty) {
           setState(() {
-            _plateNumber = cleanedPlate;
+            _plateNumber = detectedPlate;
           });
           
-          _showDetectionResult(cleanedPlate, result['confidence'] ?? 0.0);
+          _showDetectionResult(detectedPlate, result['confidence'] ?? 0.0);
         } else {
           throw Exception('ไม่สามารถอ่านป้ายทะเบียนได้ กรุณาถ่ายภาพใหม่');
         }

@@ -73,22 +73,21 @@ class _ScannerScreenState extends State<ScannerScreen> {
       
       if (result['success'] == true && result['combined_text'] != null) {
         String detectedPlate = result['combined_text'].toString();
-        String cleanedPlate = LicensePlateRecognitionService.cleanLicensePlateText(detectedPlate);
         
-        if (cleanedPlate.isNotEmpty) {
+        if (detectedPlate.isNotEmpty) {
           setState(() {
-            _plateNumber = cleanedPlate;
+            _plateNumber = detectedPlate;
           });
           
           // ค้นหาข้อมูลจากฐานข้อมูล Firebase
-          final userData = await _databaseService.getUserByLicensePlate(cleanedPlate);
+          final userData = await _databaseService.getUserByLicensePlate(detectedPlate);
           
           setState(() {
             _vehicleOwner = userData;
           });
           
           // แสดงผลลัพธ์ทันที
-          _showDetectionResult(cleanedPlate, result['confidence'] ?? 0.0);
+          _showDetectionResult(detectedPlate, result['confidence'] ?? 0.0);
         } else {
           throw Exception('ไม่สามารถอ่านป้ายทะเบียนได้ กรุณาถ่ายภาพใหม่');
         }

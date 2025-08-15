@@ -142,6 +142,6 @@ class LicensePlateRecognitionService {
       return '$digits1$thaiLetters$digits2';
     }
     
-    return cleaned.length > 10 ? cleaned.substring(0, 10) : cleaned;
+    return cleaned.length > 10 ? cleaned.substring(0, 20) : cleaned;
   }
 }

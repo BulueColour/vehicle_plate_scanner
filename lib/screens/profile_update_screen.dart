@@ -169,8 +169,8 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
 
       print('Detection result: $result');
 
-      if (result['success'] == true && result['license_plate'] != null) {
-        String detectedPlate = result['license_plate'];
+      if (result['success'] == true && result['combined_text'] != null) {
+        String detectedPlate = result['combined_text'];
         double confidence = (result['confidence'] ?? 0.0).toDouble();
 
         setState(() {
@@ -511,7 +511,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     // ตรวจสอบป้ายทะเบียน (ถ้าเปลี่ยน)
     if (_licensePlateController.text.trim().isNotEmpty) {
       final licensePlate = _licensePlateController.text.trim();
-      if (licensePlate.length < 2 || licensePlate.length > 8) {
+      if (licensePlate.length < 2 || licensePlate.length > 20) {
         _showErrorSnackBar('ป้ายทะเบียนต้องมีความยาว 2-8 ตัวอักษร');
         return;
       }
