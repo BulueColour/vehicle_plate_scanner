@@ -1,5 +1,3 @@
-// เอาใหม่ นี่เป็น checkpoint ก่อนลุย backend
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
@@ -7,6 +5,7 @@ import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import 'dart:io';
 import '../services/license_plate_recognition_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileUpdateScreen extends StatefulWidget {
   const ProfileUpdateScreen({super.key});
@@ -154,7 +153,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     }
   }
 
-  // ฟังก์ชันประมวลผลภาพ (ยังเป็นชุดข้อมูลตัวอย่างอยู่)
+  // ฟังก์ชันประมวลผลภาพ
   void _processImage(File imageFile) async {
     setState(() {
       _isScanning = true;
@@ -166,110 +165,133 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
 
       // เรียกเข้าใช้ API
       Map<String, dynamic> result = await LicensePlateRecognitionService.detectLicensePlate(imageFile);
-
       print('Detection result: $result');
 
       if (result['success'] == true && result['combined_text'] != null) {
-        String detectedPlate = result['combined_text'];
+        String detectedPlate = result['combined_text'].toString();
         double confidence = (result['confidence'] ?? 0.0).toDouble();
 
-        setState(() {
-          _licensePlateController.text = detectedPlate;
-          _isScanning = false;
-        });
+        if (detectedPlate.isNotEmpty) {
+          // 🔹 ตรวจสอบป้ายทะเบียนซ้ำใน Firebase
+          final existingUser = await _databaseService.getUserByLicensePlate(detectedPlate);
+          if (existingUser != null) {
+            // ถ้าซ้ำ → แจ้งผู้ใช้และออกจากฟังก์ชัน
+            if (mounted) {
+              await showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text('ป้ายทะเบียนซ้ำ'),
+                  content: Text('ป้ายทะเบียน "$detectedPlate" มีอยู่ในระบบแล้ว กรุณาเปลี่ยนใหม่'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('ตกลง'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            setState(() {
+              _isScanning = false;
+            });
+            return; // ❌ หยุดฟังก์ชัน ไม่อัปเดตค่า
+          }
 
-        // แสดงข้อความว่าสำเร็จ พร้อมกับ confidence score
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green, size:28),
-                  SizedBox(width: 8),
-                  Text('พบป้ายทะเบียน'),
+          // ✅ ถ้าไม่ซ้ำ → อัปเดตค่าใน TextField
+          setState(() {
+            _licensePlateController.text = detectedPlate;
+            _isScanning = false;
+          });
+
+          // แสดงข้อความว่าสำเร็จ พร้อม confidence
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size:28),
+                    SizedBox(width: 8),
+                    Text('พบป้ายทะเบียน'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'หมายเลขป้ายทะเบียน:',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    SizedBox(height: 4),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Text(
+                        detectedPlate,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[800],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'ความแม่นยำ: ${(confidence * 100).toStringAsFixed(1)}%',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    if (confidence < 0.7)
+                      Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text(
+                          '⚠️ ความแม่นยำ กรุณาตรวจสอบความถูกต้อง',
+                          style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                        ),
+                      ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {
+                        _licensePlateController.clear();
+                      });
+                    },
+                    child: Text('สแกนใหม่'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('บันทึกป้ายทะเบียน: $detectedPlate'),
+                          backgroundColor: Colors.green,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: Text('ยืนยัน'),
+                  ),
                 ],
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'หมายเลขป้ายทะเบียน:',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 4),
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    child: Text(
-                      detectedPlate,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[800],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'ความแม่นยำ: ${(confidence * 100).toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  if (confidence < 0.7)
-                  Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      '⚠️ ความแม่นยำ กรุณาตรวจสอบความถูกต้อง',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange[700],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    // ให้ผู้ใช้สแกนใหม่
-                    setState(() {
-                      _licensePlateController.clear();
-                    });
-                  },
-                  child: Text('สแกนใหม่'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('บันทึกป้ายทะเบียน: $detectedPlate'),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Text('ยืนยัน'),
-                ),
-              ],
-            ),
-          );
+            );
+          }
+
+        } else {
+          // กรณีป้ายทะเบียนว่าง
+          throw Exception('ไม่สามารถอ่านป้ายทะเบียนได้ กรุณาถ่ายภาพใหม่');
         }
       } else {
         // กรณีไม่พบป้ายทะเบียน
         setState(() {
           _isScanning = false;
         });
-
         if (mounted) {
           showDialog(
             context: context,
@@ -288,14 +310,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                   Text('ไม่สามารถตรวจจับป้ายทะเบียนได้'),
                   SizedBox(height: 12),
                   Text(
-                    'Tips:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '• ถ่ายรูปให้ป้ายทะเบียนชัดเจน\n'
-                    '• หลีกเลี่ยงการสะท้อนแสง\n'
-                    '• ถ่ายให้ป้ายทะเบียนอยู่ตรงกลาง\n'
-                    '• ระยะห่างประมาณ 1-2 เมตร',
+                    'Tips:\n• ถ่ายรูปให้ป้ายทะเบียนชัดเจน\n• หลีกเลี่ยงการสะท้อนแสง\n• ถ่ายให้ป้ายทะเบียนอยู่ตรงกลาง\n• ระยะห่างประมาณ 1-2 เมตร',
                     style: TextStyle(fontSize: 12),
                   ),
                 ],
@@ -318,7 +333,6 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
       setState(() {
         _isScanning = false;
       });
-
       if (mounted) {
         showDialog(
           context: context,
@@ -498,7 +512,6 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
 
   // ลบแค่ข้อมูลใน field ไม่ใช่ทั้ง field
   Future<void> _updateProfile() async {
-
     // ตรวจสอบหมายเลขโทรศัพท์ (ถ้าเปลี่ยน)
     if (_phoneController.text.trim().isNotEmpty) {
       final phoneNumber = _phoneController.text.trim();
@@ -512,7 +525,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     if (_licensePlateController.text.trim().isNotEmpty) {
       final licensePlate = _licensePlateController.text.trim();
       if (licensePlate.length < 2 || licensePlate.length > 20) {
-        _showErrorSnackBar('ป้ายทะเบียนต้องมีความยาว 2-8 ตัวอักษร');
+        _showErrorSnackBar('ป้ายทะเบียนต้องมีความยาว 2-20 ตัวอักษร');
         return;
       }
     }
@@ -525,79 +538,106 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
       String? uid = _authService.getCurrentUserId();
       print('Current UID: $uid');
 
-      if (uid != null) {
-        // เตรียมข้อมูลที่จะอัปเดต
-        final Map<String, dynamic> updateData = {};
+      if (uid == null) {
+        _showErrorSnackBar('ไม่พบข้อมูลผู้ใช้');
+        return;
+      }
 
-        // เพิ่มข้อมูลที่มีการกรอก
-        if (_nameController.text.trim().isNotEmpty) {
-          updateData['name'] = _nameController.text.trim();
-          _deletedFields
-              .remove('name'); // ลบออกจาก deleted fields ถ้ามีข้อมูลใหม่
-        }
+      // เตรียมข้อมูลที่จะอัปเดต
+      final Map<String, dynamic> updateData = {};
 
-        if (_phoneController.text.trim().isNotEmpty) {
-          updateData['phoneNumber'] = _phoneController.text.trim();
-          _deletedFields.remove('phoneNumber');
-        }
+      // เพิ่มข้อมูลที่มีการกรอก
+      if (_nameController.text.trim().isNotEmpty) {
+        updateData['name'] = _nameController.text.trim();
+        _deletedFields.remove('name');
+      }
 
-        // ป้ายทะเบียนจะอัปเดตเฉพาะตอนมีการสแกน
-        if (_licensePlateController.text.trim().isNotEmpty) {
-          updateData['licensePlateNumber'] =
-              _licensePlateController.text.trim();
-        }
+      if (_phoneController.text.trim().isNotEmpty) {
+        updateData['phoneNumber'] = _phoneController.text.trim();
+        _deletedFields.remove('phoneNumber');
+      }
 
-        if (_facebookController.text.trim().isNotEmpty) {
-          updateData['facebook'] = _facebookController.text.trim();
-          _deletedFields.remove('facebook');
-        }
+      // ป้ายทะเบียนจะอัปเดตเฉพาะตอนมีการกรอก/สแกน
+      if (_licensePlateController.text.trim().isNotEmpty) {
+        final licensePlate = _licensePlateController.text.trim();
 
-        if (_additionalInfoController.text.trim().isNotEmpty) {
-          updateData['additionalInfo'] = _additionalInfoController.text.trim();
-          _deletedFields.remove('additionalInfo');
-        }
+        // 🔹 ตรวจสอบป้ายทะเบียนซ้ำใน Firebase
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('licensePlateNumber', isEqualTo: licensePlate)
+            .get();
 
-        // เพิ่มฟิลด์ที่ถูกลบเป็น empty string (ไม่รวมป้ายทะเบียน)
-        for (String deletedField in _deletedFields) {
-          updateData[deletedField] = ''; // ส่ง empty string ไปที่ database
-        }
-
-        print('Updating profile with data: $updateData');
-        print('Deleted fields: $_deletedFields');
-
-
-        await _databaseService.updateUserProfileFlexible(
-          uid: uid,
-          updateData: updateData,
-        );
-
-        print('Profile updated successfully');
-
-        if (mounted) {
-          // นับจำนวนฟิลด์ที่มีการเปลี่ยนแปลง
-          final changedFields =
-              updateData.keys.where((key) => updateData[key] != '').length;
-          final deletedCount = _deletedFields.length;
-
-          String successMessage = 'อัปเดตข้อมูลสำเร็จ';
-          if (changedFields > 0 || deletedCount > 0) {
-            List<String> parts = [];
-            if (changedFields > 0) parts.add('แก้ไข $changedFields รายการ');
-            if (deletedCount > 0) parts.add('ลบ $deletedCount รายการ');
-            successMessage += ' (${parts.join(', ')})';
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(successMessage),
-              backgroundColor: Colors.green,
+        if (snapshot.docs.isNotEmpty &&
+            snapshot.docs.first.id != uid) {
+          // ถ้าซ้ำ → แจ้งเตือนแล้วหยุด
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('ป้ายทะเบียนซ้ำ'),
+              content: Text('มีป้ายทะเบียนนี้ในระบบแล้ว กรุณาเปลี่ยนใหม่'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('ตกลง'),
+                ),
+              ],
             ),
           );
 
-          Navigator.pop(context, true);
+          return; // ❌ หยุดฟังก์ชัน ไม่อัปเดตค่า
         }
-      } else {
-        _showErrorSnackBar('ไม่พบข้อมูลผู้ใช้');
+
+        // ถ้าไม่ซ้ำ → อัปเดตได้
+        updateData['licensePlateNumber'] = licensePlate;
+        _deletedFields.remove('licensePlateNumber');
+      }
+
+      if (_facebookController.text.trim().isNotEmpty) {
+        updateData['facebook'] = _facebookController.text.trim();
+        _deletedFields.remove('facebook');
+      }
+
+      if (_additionalInfoController.text.trim().isNotEmpty) {
+        updateData['additionalInfo'] = _additionalInfoController.text.trim();
+        _deletedFields.remove('additionalInfo');
+      }
+
+      // เพิ่มฟิลด์ที่ถูกลบเป็น empty string (ไม่รวมป้ายทะเบียน)
+      for (String deletedField in _deletedFields) {
+        updateData[deletedField] = '';
+      }
+
+      print('Updating profile with data: $updateData');
+      print('Deleted fields: $_deletedFields');
+
+      await _databaseService.updateUserProfileFlexible(
+        uid: uid,
+        updateData: updateData,
+      );
+
+      print('Profile updated successfully');
+
+      if (mounted) {
+        final changedFields =
+            updateData.keys.where((key) => updateData[key] != '').length;
+        final deletedCount = _deletedFields.length;
+
+        String successMessage = 'อัปเดตข้อมูลสำเร็จ';
+        if (changedFields > 0 || deletedCount > 0) {
+          List<String> parts = [];
+          if (changedFields > 0) parts.add('แก้ไข $changedFields รายการ');
+          if (deletedCount > 0) parts.add('ลบ $deletedCount รายการ');
+          successMessage += ' (${parts.join(', ')})';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(successMessage),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context, true);
       }
     } catch (e) {
       print('Error updating profile: $e');

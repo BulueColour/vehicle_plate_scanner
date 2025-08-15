@@ -1,29 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Get current user
   User? get currentUser => _auth.currentUser;
-
-  // Auth state changes stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+  String? getCurrentUserId() => _auth.currentUser?.uid;
 
-  String? getCurrentUserId() {
-    return _auth.currentUser?.uid;
-  }
-
-  // Sign in with email and password
-  Future<UserCredential?> signInWithEmailAndPassword(
-    String email,
-    String password,
-  ) async {
+  // 🔹 แก้ตรงนี้ให้คืนค่า role แทน Navigator
+  Future<String> signInWithEmailAndPassword(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return result;
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      
+      // คืนค่า role ให้ Widget เป็นคนจัดการ navigation
+      return await getUserRole();
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
@@ -31,16 +23,19 @@ class AuthService {
     }
   }
 
-  // Create user with email and password
-  Future<UserCredential?> createUserWithEmailAndPassword(
-    String email,
-    String password,
-  ) async {
+  Future<UserCredential?> createUserWithEmailAndPassword(String email, String password) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      await _firestore.collection('users').doc(result.user!.uid).set({
+        'email': email,
+        'role': 'users',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
       return result;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -49,7 +44,6 @@ class AuthService {
     }
   }
 
-  // Sign out
   Future<void> signOut() async {
     try {
       await _auth.signOut();
@@ -58,13 +52,10 @@ class AuthService {
     }
   }
 
-  // Delete user account
   Future<void> deleteAccount() async {
     try {
       User? user = _auth.currentUser;
-      if (user != null) {
-        await user.delete();
-      }
+      if (user != null) await user.delete();
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
@@ -72,7 +63,6 @@ class AuthService {
     }
   }
 
-  // Reset password
   Future<void> resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -83,7 +73,14 @@ class AuthService {
     }
   }
 
-  // Handle Firebase Auth exceptions
+  Future<String> getUserRole() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return 'users';
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists && doc.data()?['role'] == 'admin') return 'admin';
+    return 'users';
+  }
+
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
@@ -102,8 +99,6 @@ class AuthService {
         return 'มีการพยายามเข้าสู่ระบบมากเกินไป กรุณาลองใหม่ภายหลัง';
       case 'operation-not-allowed':
         return 'การดำเนินการนี้ไม่ได้รับอนุญาต';
-      case 'invalid-credential':
-        return 'ข้อมูลการเข้าสู่ระบบไม่ถูกต้อง';
       default:
         return 'เกิดข้อผิดพลาด: ${e.message}';
     }

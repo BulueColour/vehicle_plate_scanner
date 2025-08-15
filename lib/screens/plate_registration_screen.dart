@@ -85,6 +85,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       if (result['success'] == true && result['combined_text'] != null) {
         String detectedPlate = result['combined_text'].toString();
         
+        // ถ้าอ่านป้ายได้
         if (detectedPlate.isNotEmpty) {
           setState(() {
             _plateNumber = detectedPlate;
@@ -92,6 +93,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
           
           _showDetectionResult(detectedPlate, result['confidence'] ?? 0.0);
         } else {
+          // ถ้าอ่านป้ายไม่ได้
           throw Exception('ไม่สามารถอ่านป้ายทะเบียนได้ กรุณาถ่ายภาพใหม่');
         }
       } else {
@@ -198,7 +200,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
     );
   }
 
-  // method อื่นๆ ยังเหมือนเดิม...
   void _completeRegistration() async {
     if (_plateNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -8,6 +8,7 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'screens/plate_registration_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
         '/scanner': (context) => const ScannerScreen(),
+        '/adminHome': (context) => const AdminDashboardScreen(),
         '/plate-registration': (context) => const PlateRegistrationScreen(),
       },
     );

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/admin_dashboard_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -10,25 +11,39 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthService authService = AuthService();
-    
+
     return StreamBuilder<User?>(
       stream: authService.authStateChanges,
       builder: (context, snapshot) {
-        // Show loading while checking auth state
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        
-        // If user is logged in, show home screen
+
         if (snapshot.hasData && snapshot.data != null) {
-          return const HomeScreen();
+          return FutureBuilder<String>(
+            future: authService.getUserRole(),
+            builder: (context, roleSnapshot) {
+              if (roleSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (roleSnapshot.hasData) {
+                final role = roleSnapshot.data!;
+                if (role == 'admin') {
+                  return const AdminDashboardScreen();
+                } else {
+                  return const HomeScreen();
+                }
+              }
+              return const LoginScreen();
+            },
+          );
         }
-        
-        // If user is not logged in, show login screen
+
         return const LoginScreen();
       },
     );
