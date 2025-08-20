@@ -9,12 +9,9 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   String? getCurrentUserId() => _auth.currentUser?.uid;
 
-  // 🔹 แก้ตรงนี้ให้คืนค่า role แทน Navigator
   Future<String> signInWithEmailAndPassword(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      
-      // คืนค่า role ให้ Widget เป็นคนจัดการ navigation
       return await getUserRole();
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -33,6 +30,8 @@ class AuthService {
       await _firestore.collection('users').doc(result.user!.uid).set({
         'email': email,
         'role': 'users',
+        'name': '',
+        'fcmToken': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -49,27 +48,6 @@ class AuthService {
       await _auth.signOut();
     } catch (e) {
       throw 'ไม่สามารถออกจากระบบได้: $e';
-    }
-  }
-
-  Future<void> deleteAccount() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) await user.delete();
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    } catch (e) {
-      throw 'ไม่สามารถลบบัญชีได้: $e';
-    }
-  }
-
-  Future<void> resetPassword(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    } catch (e) {
-      throw 'ไม่สามารถส่งอีเมลรีเซ็ตรหัสผ่านได้: $e';
     }
   }
 

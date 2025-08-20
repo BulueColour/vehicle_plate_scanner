@@ -1,19 +1,37 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+/* eslint-disable */
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
 
-const {onRequest} = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
+admin.initializeApp();
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+// Trigger เมื่อมี report ใหม่
+exports.sendReportNotificationToAdmin = functions.firestore
+    .document("reports/{reportId}")
+    .onCreate(async (snap, context) => {
+        const report = snap.data();
+        if (!report) return;
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+        // ดึง admin ทั้งหมด
+        const adminSnapshot = await admin.firestore().collection("users")
+            .where("role", "==", "admin")
+            .get();
+
+        const tokens = [];
+        adminSnapshot.forEach(doc => {
+            const token = doc.data().fcmToken;
+            if (token) tokens.push(token);
+        });
+
+        if (tokens.length === 0) return;
+
+        const message = {
+            notification: {
+                title: "มีรายงานใหม่",
+                body: report.detail || "มีรายละเอียดเพิ่มเติม",
+            },
+            tokens: tokens,
+        };
+
+        await admin.messaging().sendMulticast(message);
+        console.log("✅ Notification sent to admin");
+    });

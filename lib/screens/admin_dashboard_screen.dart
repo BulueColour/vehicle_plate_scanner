@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/cloud_messaging_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -10,118 +10,62 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final AuthService _authService = AuthService();
-  final CloudMessagingService _cms = CloudMessagingService();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
-    _initFCM();
+    initNotifications();
+    listenReports();
   }
 
-  Future<void> _initFCM() async {
-    await _cms.initFCM();
-
-    // ฟัง notification ขณะ app อยู่ foreground
-    _cms.onMessage.listen((message) {
-      final title = message.notification?.title ?? 'แจ้งเตือนใหม่';
-      final body = message.notification?.body ?? '';
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$title\n$body'),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    });
+  void initNotifications() async {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings settings =
+        InitializationSettings(android: androidSettings);
+    await flutterLocalNotificationsPlugin.initialize(settings);
   }
 
-  Future<void> _logout() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ออกจากระบบ'),
-        content: const Text('คุณต้องการออกจากระบบหรือไม่?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await _authService.signOut();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('ไม่สามารถออกจากระบบได้: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('ออกจากระบบ', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  void showLocalNotification(String message) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'report_channel',
+      'Report Notifications',
+      channelDescription: 'Channel for new report notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const NotificationDetails platformDetails =
+        NotificationDetails(android: androidDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'รายงานปัญหาใหม่',
+      message,
+      platformDetails,
     );
   }
 
-  void _navigateToScanner() {
-    Navigator.pushNamed(context, '/scanner');
+  void listenReports() {
+    FirebaseFirestore.instance.collection('reports').snapshots().listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data != null) {
+            showLocalNotification(data['detail'] ?? 'มีรายงานใหม่');
+          }
+        }
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        centerTitle: true,
-        backgroundColor: Colors.indigo[700],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            // สแกนป้ายทะเบียน
-            GestureDetector(
-              onTap: _navigateToScanner,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue[600]!, Colors.blue[400]!],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.qr_code_scanner, size: 32, color: Colors.white),
-                    SizedBox(width: 16),
-                    Text(
-                      'สแกนป้ายทะเบียน',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'เมื่อมีรายงานใหม่จากผู้ใช้ ระบบจะแสดงแจ้งเตือนด้านบนอัตโนมัติ',
-              style: TextStyle(color: Colors.black54),
-            ),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: const Text("Admin Dashboard")),
+      body: Center(child: Text("รอรายงานใหม่...")),
     );
   }
 }

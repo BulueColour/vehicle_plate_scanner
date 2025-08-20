@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_button.dart';
-import '../services/cloud_messaging_service.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../services/cloud_messaging_service.dart'; // เพิ่ม import
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -23,14 +24,9 @@ class _ReportScreenState extends State<ReportScreen> {
     'อื่น ๆ'
   ];
 
-  final CloudMessagingService _cms = CloudMessagingService();
   final AuthService _authService = AuthService();
-
-  @override
-  void initState() {
-    super.initState();
-    _cms.initFCM(); // init FCM
-  }
+  final DatabaseService _databaseService = DatabaseService();
+  final CloudMessagingService _cloudMessagingService = CloudMessagingService();
 
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
@@ -47,16 +43,30 @@ class _ReportScreenState extends State<ReportScreen> {
     }
 
     try {
-      final user = await _cms._authService.getUser(); // หรือดึงจาก DatabaseService
-      final role = user?['role'] ?? 'user'; // ดึง role ของผู้ใช้
+      final role = await _authService.getUserRole();
 
-      await FirebaseFirestore.instance.collection('reports').add({
-        'userId': userId,
-        'role': role, // เพิ่ม field role
-        'location': _selectedLocation,
-        'detail': _detailController.text,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // 1️⃣ บันทึกรายงาน
+      await _databaseService.addReport(
+        userId: userId,
+        role: role,
+        location: _selectedLocation!,
+        description: _detailController.text,
+      );
+
+      // 2️⃣ ดึง admin ทั้งหมด
+      final admins = await _databaseService.getAllAdmins();
+      final adminTokens = admins
+          .map((admin) => admin['fcmToken'] as String?)
+          .where((token) => token != null)
+          .cast<String>()
+          .toList();
+
+      // 3️⃣ ส่ง notification ไป admin
+      if (adminTokens.isNotEmpty) {
+        final title = "รายงานปัญหาใหม่";
+        final body = "ผู้ใช้ได้ส่งรายงาน: ${_selectedLocation!}";
+        await _cloudMessagingService.sendNotificationToAdmins(adminTokens, title, body);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("ส่งรายงานเรียบร้อย")),
@@ -70,7 +80,6 @@ class _ReportScreenState extends State<ReportScreen> {
       _showErrorDialog(e.toString());
     }
   }
-
 
   void _showErrorDialog(String message) {
     showDialog(
@@ -119,10 +128,18 @@ class _ReportScreenState extends State<ReportScreen> {
                 controller: _detailController,
                 maxLines: 4,
                 maxLength: 500,
-                decoration: const InputDecoration(labelText: "รายละเอียดเพิ่มเติม", border: OutlineInputBorder(), alignLabelWithHint: true),
+                decoration: const InputDecoration(
+                  labelText: "รายละเอียดเพิ่มเติม",
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
               ),
               const SizedBox(height: 24),
-              CustomButton(text: "ส่ง", onPressed: _submitReport, color: Colors.green[700]),
+              CustomButton(
+                text: "ส่ง",
+                onPressed: _submitReport,
+                color: Colors.green[700],
+              ),
             ],
           ),
         ),

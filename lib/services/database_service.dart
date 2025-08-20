@@ -6,17 +6,10 @@ class DatabaseService {
 
   // Collection reference
   CollectionReference get _usersCollection => _db.collection('users');
+  CollectionReference get _reportsCollection => _db.collection('reports');
 
-  // Create user document
-  Future<void> createUser(UserModel user) async {
-    try {
-      await _usersCollection.doc(user.uid).set(user.toMap());
-    } catch (e) {
-      throw 'ไม่สามารถบันทึกข้อมูลผู้ใช้ได้: $e';
-    }
-  }
+  // Users
 
-  // Get user by UID
   Future<UserModel?> getUser(String uid) async {
     try {
       DocumentSnapshot doc = await _usersCollection.doc(uid).get();
@@ -26,6 +19,50 @@ class DatabaseService {
       return null;
     } catch (e) {
       throw 'ไม่สามารถดึงข้อมูลผู้ใช้ได้: $e';
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllAdmins() async {
+    final snapshot = await _db.collection('users').where('role', isEqualTo: 'admin').get();
+    return snapshot.docs.map((doc) {
+      return {
+        'uid': doc.id,
+        'name': doc.data()['name'],
+        'fcmToken': doc.data()['fcmToken'],
+      };
+    }).toList();
+  }
+
+  // Reports
+  
+  Future<void> addReport({
+    required String userId,
+    required String location,
+    required String description,
+  }) async {
+    try {
+      await _reportsCollection.add({
+        'userId': userId,
+        'role': 'users',
+        'location': location,
+        'description': description,
+        'createAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw 'ไม่สามารถเพิ่มรายงานได้: $e';
+    }
+  }
+
+  Stream<QuerySnapshot> streamReports() {
+    return _reportsCollection.orderBy('createAt', descending: true).snapshots();
+  }
+
+  // Create user document
+  Future<void> createUser(UserModel user) async {
+    try {
+      await _usersCollection.doc(user.uid).set(user.toMap());
+    } catch (e) {
+      throw 'ไม่สามารถบันทึกข้อมูลผู้ใช้ได้: $e';
     }
   }
 
@@ -309,4 +346,6 @@ class DatabaseService {
       throw 'ไม่สามารถตรวจสอบป้ายทะเบียนได้: $e';
     }
   }
+
+  
 }
