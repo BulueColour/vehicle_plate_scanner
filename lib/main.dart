@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:vehicle_plate_scanner/screens/report_screen.dart';
 import 'firebase_options.dart';
 import 'widgets/auth_wrapper.dart';
 import 'screens/login_screen.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/scanner': (context) => const ScannerScreen(),
         '/adminHome': (context) => const AdminDashboardScreen(),
         '/plate-registration': (context) => const PlateRegistrationScreen(),
+        '/report' : (context) => const ReportScreen(),
       },
     );
   }

@@ -291,25 +291,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 20),
 
-                  // History Card (Demo)
+                  // Report function
                   _buildMenuCard(
                     context,
-                    title: 'ประวัติการสแกน',
-                    subtitle: 'ดูประวัติการค้นหาที่ผ่านมา',
-                    icon: Icons.history,
+                    title: 'รายงาน',
+                    subtitle: 'รายงานปัญหาเพื่อขอความช่วยเหลือจากเจ้าหน้าที่ในบริเวณใกล้เคียง',
+                    icon: Icons.report,
                     gradient: [Colors.orange[600]!, Colors.orange[400]!],
                     borderColor: Colors.orange[100]!,
                     iconBg: Colors.orange,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('ฟีเจอร์นี้จะพร้อมใช้งานเร็วๆ นี้'),
-                        ),
-                      );
-                    },
+                    onTap: () => Navigator.pushNamed(context, '/report'),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 30),
 
                   // Footer
                   Center(
@@ -325,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            'Vehicle Plate Scanner v1.0.0',
+                            'Vehicle Plate Scanner v2.0.0',
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 13,
@@ -335,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'User Panel',
+                          'MOTO KMITL',
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontSize: 12,
@@ -430,7 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           color: Colors.grey[600],
                         ),
                       ),
