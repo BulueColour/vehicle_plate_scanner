@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_button.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -50,15 +51,18 @@ class _ReportScreenState extends State<ReportScreen> {
         description: _detailController.text,
       );
 
-      // ✅ แจ้งเตือนผ่าน Snackbar บน UI
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("ส่งรายงานเรียบร้อย"),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      // ✅ แสดง Snackbar แทน Notification
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("ส่งรายงานเรียบร้อย"),
+            backgroundColor: Colors.green[700],
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
 
+      // รีเซ็ต form
       setState(() {
         _selectedLocation = null;
         _detailController.clear();
@@ -82,9 +86,7 @@ class _ReportScreenState extends State<ReportScreen> {
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("ตกลง"),
-          )
+              onPressed: () => Navigator.pop(context), child: const Text("ตกลง"))
         ],
       ),
     );
@@ -99,11 +101,7 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("รายงานปัญหา"),
-        centerTitle: true,
-        backgroundColor: Colors.green[700],
-      ),
+      appBar: AppBar(title: const Text("รายงานปัญหา"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -112,9 +110,7 @@ class _ReportScreenState extends State<ReportScreen> {
             children: [
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
-                  labelText: "เลือกสถานที่",
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: "เลือกสถานที่", border: OutlineInputBorder()),
                 value: _selectedLocation,
                 items: _locations
                     .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))

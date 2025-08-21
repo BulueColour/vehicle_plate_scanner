@@ -37,16 +37,17 @@ class DatabaseService {
   
   Future<void> addReport({
     required String userId,
+    required String role,
     required String location,
     required String description,
   }) async {
     try {
       await _reportsCollection.add({
         'userId': userId,
-        'role': 'users',
+        'role': role,
         'location': location,
         'description': description,
-        'createAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw 'ไม่สามารถเพิ่มรายงานได้: $e';
@@ -54,7 +55,7 @@ class DatabaseService {
   }
 
   Stream<QuerySnapshot> streamReports() {
-    return _reportsCollection.orderBy('createAt', descending: true).snapshots();
+    return _reportsCollection.orderBy('createdAt', descending: true).snapshots();
   }
 
   // Create user document

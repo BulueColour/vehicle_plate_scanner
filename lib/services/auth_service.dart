@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ เพิ่ม import
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -12,7 +13,8 @@ class AuthService {
   Future<String> signInWithEmailAndPassword(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      return await getUserRole();
+      final role = await getUserRole();
+      return role;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
@@ -31,7 +33,6 @@ class AuthService {
         'email': email,
         'role': 'users',
         'name': '',
-        'fcmToken': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
