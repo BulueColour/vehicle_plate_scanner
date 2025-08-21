@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ เพิ่ม import
+// ✅ เพิ่ม import
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;

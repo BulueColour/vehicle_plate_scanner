@@ -23,7 +23,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   // สำหรับ stream รายงาน
   Stream<QuerySnapshot>? _reportStream;
-  DateTime _appStartTime = DateTime.now();
+  final DateTime _appStartTime = DateTime.now();
 
   @override
   void initState() {
@@ -1028,7 +1028,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 ),
                               ),
                             );
-                          }).toList(),
+                          }),
 
                           // Show More Button (หากมีรายงานเยอะ)
                           if (reports.length > 5)

@@ -8,6 +8,7 @@ class UserModel {
   final String? additionalInfo; // additional_info (OPTIONAL)
   final DateTime createAt; // create_at
   final DateTime? updateAt; // update_at
+  final String? role; // role default เป็น users
 
   UserModel({
     required this.uid,
@@ -19,6 +20,7 @@ class UserModel {
     this.additionalInfo,
     required this.createAt,
     this.updateAt,
+    this.role = 'users',
   });
 
   // Convert from Firestore document to UserModel
@@ -33,6 +35,7 @@ class UserModel {
       additionalInfo: _getNullableString(map['additional_info']),
       createAt: map['create_at']?.toDate() ?? DateTime.now(),
       updateAt: map['update_at']?.toDate(),
+      role: map['role'] ?? 'users',
     );
   }
 
@@ -54,6 +57,7 @@ class UserModel {
       'additional_info': additionalInfo,
       'create_at': createAt,
       'update_at': updateAt,
+      'role': role,
     };
   }
 

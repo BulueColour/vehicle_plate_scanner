@@ -237,6 +237,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
         email: _userData!['email'],
         phoneNumber: _userData!['phone'],
         createAt: DateTime.now(),
+        role: 'users',
       );
 
       await _databaseService.createUser(newUser);
