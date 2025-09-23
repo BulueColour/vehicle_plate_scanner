@@ -484,6 +484,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       appBar: AppBar(
         title: const Text('สแกนป้ายทะเบียน'),
         centerTitle: true,
+        backgroundColor: Colors.blue[700],
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
