@@ -10,6 +10,8 @@ import 'screens/scanner_screen.dart';
 import 'screens/plate_registration_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
+import 'screens/tts_demo_screen.dart';
+import 'screens/camera_lpr_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +35,7 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      initialRoute: '/',
+      initialRoute: '/camera-lpr',
       routes: {
         '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
@@ -43,6 +45,8 @@ class MyApp extends StatelessWidget {
         '/adminHome': (context) => const AdminDashboardScreen(),
         '/plate-registration': (context) => const PlateRegistrationScreen(),
         '/report': (context) => const ReportScreen(),
+        '/tts-demo': (context) => const TTSDemoScreen(),
+        '/camera-lpr': (context) => const CameraLPRScreen(),
       },
     );
   }
