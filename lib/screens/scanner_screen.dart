@@ -3,8 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../widgets/custom_button.dart';
 import '../services/database_service.dart';
-import '../services/license_plate_recognition_service.dart'; // เพิ่มบรรทัดนี้
+import '../services/license_plate_recognition_service.dart';
 import '../models/user_model.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -15,10 +16,45 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen> {
   final DatabaseService _databaseService = DatabaseService();
+  final FlutterTts flutterTts = FlutterTts();
   bool _isScanning = false;
   String? _plateNumber;
   UserModel? _vehicleOwner;
   File? _selectedImage; // เพิ่มตัวแปรนี้
+
+  @override // initialize การอ่านออกเสียง
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  Future<void> _initTts() async { // ตั้งค่า TTS
+    await flutterTts.setLanguage("th-TH");
+    await flutterTts.setPitch(1.0);
+    await flutterTts.setSpeechRate(0.6);
+  }
+
+  Future<void> _speakPlateNumber() async {
+    if (_plateNumber == null || _plateNumber!.isEmpty) return;
+
+    String textToSpeak = "ป้ายทะเบียน $_plateNumber";
+
+    if (_vehicleOwner != null) {
+      textToSpeak += " พบข้อมูลในระบบ";
+      if (_vehicleOwner!.name != null && _vehicleOwner!.name!.isNotEmpty) {
+        textToSpeak += " ชื่อ #{_vehicleOwner!.name}";
+      }
+    } else {
+      textToSpeak += " ไม่พบข้อมูลในระบบ";
+    }
+    await flutterTts.speak(textToSpeak);
+  }
+
+  @override // หยุดอ่านออกเสียงเมื่อออกจากหน้านั้น
+  void dispose() {
+    flutterTts.stop();
+    super.dispose();
+  }
 
   Future<void> _scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
@@ -357,6 +393,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 ],
               ),
         actions: [
+          IconButton( // ปุ่มอ่านออกเสียง
+            onPressed: _speakPlateNumber,
+            icon: const Icon(Icons.volume_up),
+            tooltip: 'อ่านออกเสียง',
+            color: Colors.blue[700],
+          ),
           if (_vehicleOwner != null) ...[
             TextButton(
               onPressed: () {
@@ -623,6 +665,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
                               ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          onPressed: _speakPlateNumber,
+                          icon: const Icon(Icons.volume_up),
+                          color: Colors.blue[700],
+                          tooltip: 'อ่านออกเสียง',
                         ),
                       ],
                     ),
