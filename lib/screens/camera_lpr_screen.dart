@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../services/camera_lpr_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CameraLPRScreen extends StatefulWidget {
   const CameraLPRScreen({super.key});
@@ -19,6 +20,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> with WidgetsBindingOb
   String _statusText = 'แตะหน้าจอเพื่อถ่ายภาพป้ายทะเบียน';
   
   final FlutterTts _flutterTts = FlutterTts();
+  final ImagePicker _picker = ImagePicker();
   File? _capturedImage;
   String? _detectedPlate;
 
@@ -155,6 +157,63 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> with WidgetsBindingOb
       setState(() {
         _isProcessing = false;
       });
+    }
+  }
+
+  // เลือกจากคลัง
+  Future<void> _pickFromGallery() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile == null) return;
+      setState(() {
+        _isProcessing = true;
+        _statusText = 'กำลังประมวลผลด้วย AI...';
+        _capturedImage = File(pickedFile.path);
+      });
+
+      await _processImage(_capturedImage!);
+    } catch (e) {
+      setState(() {
+        _statusText = 'ไม่สามารถเลือกภาพได้: $e';
+      });
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  // ประมวลผลร่วมกัน
+  Future<void> _processImage(File imageFile) async {
+    setState(() {
+      _capturedImage = imageFile;
+    });
+
+    Map<String, dynamic> result = await CameraLPRService.detectLicensePlate(imageFile);
+
+    if (result['success'] == true) {
+      String plateText = result['combined_text'] ?? '';
+      double confidence = result['confidence'] ?? 0.0;
+
+      setState(() {
+        _detectedPlate = plateText;
+        _statusText = plateText.isNotEmpty
+        ?'อ่านได้: $plateText'
+        :'ไม่พบป้ายทะเบียน';
+      });
+
+      if (plateText.isNotEmpty) {
+        await _speak(plateText);
+        _showResultDialog(plateText, confidence);
+      } else {
+        await _speak('ไม่พบป้ายทะเบียนในภาพ');
+      }
+    } else {
+      String errorMsg = result['message'] ?? 'เกิดข้อผิดพลาดขึ้น';
+      setState(() {
+        _statusText = '$errorMsg';
+      });
+      await _speak(errorMsg);
     }
   }
 
@@ -305,21 +364,16 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> with WidgetsBindingOb
         children: [
           // Camera Preview
           if (_isInitialized && _controller != null)
-            GestureDetector(
-              onTap: _isProcessing ? null : _captureAndProcess,
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: _controller!.value.aspectRatio,
-                  child: CameraPreview(_controller!),
-                ),
-              ),
+            IgnorePointer(
+              ignoring: _isProcessing,
+              child: CameraPreview(_controller!),
             )
           else
             const Center(
               child: CircularProgressIndicator(color: Colors.white),
             ),
 
-          // Overlay Guide (กรอบสี่เหลี่ยมแนะนำการวางป้ายทะเบียน)
+          // กรอบสี่เหลี่ยมแนะนำการวางป้าย
           if (_isInitialized && !_isProcessing)
             Center(
               child: Container(
@@ -392,6 +446,19 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> with WidgetsBindingOb
                   ],
                 ],
               ),
+            ),
+          ),
+
+          // ปุ่มเลือกภาพจากคลัง
+          Positioned(
+            bottom: 20,
+            right: 20, //มุมขวาล่าง
+            child: FloatingActionButton(
+              heroTag: 'pick_gallery',
+              backgroundColor: Colors.blueAccent,
+              onPressed: _isProcessing ? null : _pickFromGallery,
+              tooltip: 'เลือกจากคลังภาพ',
+              child: const Icon(Icons.photo_library),
             ),
           ),
 
