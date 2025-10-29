@@ -7,17 +7,16 @@ class CameraLPRService {
   // ⚠️ เปลี่ยน URL นี้เป็น Backend ของคุณ
   // ตัวอย่าง: 'http://192.168.1.100:8000' หรือ 'https://your-api.com'
   static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String detectEndpoint = '/detect-license-plate';
   
   /// ส่งภาพไปยัง Backend เพื่อตรวจจับและอ่านป้ายทะเบียน
   static Future<Map<String, dynamic>> detectLicensePlate(File imageFile) async {
     try {
-      if (kDebugMode) {
-        print('📤 Sending image to: $baseUrl/detect');
-      }
+      print('Sending image to $baseUrl$detectEndpoint');
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/detect'),
+        Uri.parse('$baseUrl$detectEndpoint'),
       );
 
       // แนบไฟล์ภาพ (field name ต้องตรงกับที่ Backend ต้องการ เช่น 'file')
@@ -30,9 +29,9 @@ class CameraLPRService {
 
       // ส่ง request พร้อม timeout
       var streamedResponse = await request.send().timeout(
-        const Duration(seconds: 30),
+        const Duration(seconds: 50),
         onTimeout: () {
-          throw Exception('Request timeout - Backend ไม่ตอบกลับภายใน 30 วินาที');
+          throw Exception('Request timeout - Backend ไม่ตอบกลับภายใน 50 วินาที');
         },
       );
 

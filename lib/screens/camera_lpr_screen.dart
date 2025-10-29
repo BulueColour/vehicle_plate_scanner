@@ -123,22 +123,22 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> with WidgetsBindingOb
       // ส่งไป Backend
       Map<String, dynamic> result = await CameraLPRService.detectLicensePlate(imageFile);
 
-      if (result['success'] == true) {
-        String plateText = result['combined_text'] ?? '';
+      if (result['success'] == true && result['combined_text'] != null) {
+        String plateText = result['combined_text'].toString();
         double confidence = result['confidence'] ?? 0.0;
 
-        setState(() {
-          _detectedPlate = plateText;
-          _statusText = plateText.isNotEmpty 
-            ? '✅ อ่านได้: $plateText'
-            : '⚠️ ไม่พบป้ายทะเบียน';
-        });
-
-        // ใช้ TTS อ่านผลลัพธ์
         if (plateText.isNotEmpty) {
+          setState(() {
+            _detectedPlate = plateText;
+            _statusText = 'อ่านได้: $plateText';
+          });
+
           await _speak(plateText);
           _showResultDialog(plateText, confidence);
         } else {
+          setState(() {
+            _statusText = 'ไม่พบป้ายทะเบีนย';
+          });
           await _speak('ไม่พบป้ายทะเบียนในภาพ');
         }
       } else {
@@ -187,33 +187,42 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> with WidgetsBindingOb
   Future<void> _processImage(File imageFile) async {
     setState(() {
       _capturedImage = imageFile;
+      _statusText = 'กำลังประมวลผลด้วย AI...';
     });
 
-    Map<String, dynamic> result = await CameraLPRService.detectLicensePlate(imageFile);
+    try {
+      Map<String, dynamic> result = await CameraLPRService.detectLicensePlate(imageFile);
 
-    if (result['success'] == true) {
-      String plateText = result['combined_text'] ?? '';
-      double confidence = result['confidence'] ?? 0.0;
+      if (result['success'] == true && result['combined_text'] != null) {
+        String plateText = result['combined_text'].toString();
+        double confidence = result['confidence'] ?? 0.0;
 
-      setState(() {
-        _detectedPlate = plateText;
-        _statusText = plateText.isNotEmpty
-        ?'อ่านได้: $plateText'
-        :'ไม่พบป้ายทะเบียน';
-      });
+        if (plateText.isNotEmpty) {
+          setState(() {
+            _detectedPlate = plateText;
+            _statusText = 'อ่านได้: $plateText';
+          });
 
-      if (plateText.isNotEmpty) {
-        await _speak(plateText);
-        _showResultDialog(plateText, confidence);
+          await _speak(plateText);
+          _showResultDialog(plateText, confidence);
+        } else {
+          setState(() {
+            _statusText = 'ไม่พบป้ายทะเบียน';
+          });
+          await _speak('ไม่พบป้ายทะเบียนในภาพ');
+        }
       } else {
-        await _speak('ไม่พบป้ายทะเบียนในภาพ');
+        String errorMsg = result['messege'] ?? 'เกิดข้อผิดพลาด';
+        setState(() {
+          _statusText = '$errorMsg';
+        });
+        await _speak(errorMsg);
       }
-    } else {
-      String errorMsg = result['message'] ?? 'เกิดข้อผิดพลาดขึ้น';
+    } catch (e) {
       setState(() {
-        _statusText = '$errorMsg';
+        _statusText = 'เกิดข้อผิดพลาด: $e';
       });
-      await _speak(errorMsg);
+      await _speak('เกิดข้อผิดพลาด');
     }
   }
 
