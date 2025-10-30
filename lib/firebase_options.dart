@@ -59,4 +59,5 @@ class DefaultFirebaseOptions {
     projectId: 'vehicle-plate-scanner',
     storageBucket: 'vehicle-plate-scanner.firebasestorage.app',
   );
+
 }
