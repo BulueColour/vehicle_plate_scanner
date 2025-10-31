@@ -429,7 +429,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: Container(
+                child: SizedBox(
                   height: 220,
                   width: double.infinity,
                   child: ElevatedButton.icon(
