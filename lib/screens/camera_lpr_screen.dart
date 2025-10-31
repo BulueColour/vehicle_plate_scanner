@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart'; // ✅ เพิ่ม import
 import '../services/camera_lpr_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_danger_service.dart';
-import 'package:flutter/services.dart';
 
 class CameraLPRScreen extends StatefulWidget {
   final CameraDescription? camera; // ✅ เพิ่ม ? เพื่อให้เป็น nullable
@@ -197,18 +196,6 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
   Future<void> _onLicensePlateDetected(String plateText, double confidence) async {
     print('ตรวจพบป้ายทะเบียน: $plateText');
 
-    // สั่นและส่งเสียงแจ้งเตือนเมื่อ detect
-    try {
-      SystemSound.play(SystemSoundType.alert);
-
-      HapticFeedback.heavyImpact();
-
-
-      await _speakResult('กำลังประมวลผล');
-    } catch (e) {
-      print('Vibration or TTS error: $e');
-    }
-
     setState(() {
       _isScanning = false;
       _detectionResult = plateText;
@@ -314,7 +301,6 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
           final confidence = result['confidence']?.toDouble() ?? 0.0;
 
           await _onLicensePlateDetected(plateText, confidence);
-          print('เจอป้ายทะเบียน กำลังอ่านออกเสียง...');
 
       } else {
         if (mounted) {
