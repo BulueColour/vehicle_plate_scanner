@@ -31,6 +31,8 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
   String _detectionResult = '';
   double _confidence = 0.0;
   DateTime? _lastDetectionTime;
+  bool _isDangerous = false;
+  String _dangerReason = '';
   
   // Throttling
   static const Duration _detectionInterval = Duration(milliseconds: 1000);
@@ -68,6 +70,8 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
           setState(() {
             _detectionResult = 'ไม่พบกล้อง';
             _isScanning = false;
+            _isDangerous = false;
+            _dangerReason = '';
           });
         }
         return;
@@ -85,6 +89,8 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
         setState(() {
           _detectionResult = 'เกิดข้อผิดพลาด: $e';
           _isScanning = false;
+          _isDangerous = false;
+          _dangerReason = '';
         });
       }
     }
@@ -200,6 +206,8 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
       _isScanning = false;
       _detectionResult = plateText;
       _confidence = confidence;
+      _isDangerous = false;
+      _dangerReason = '';
     });
 
     // ปิดกล้องชั่วคราว
@@ -218,6 +226,11 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
         final reason = dangerData['reason'] ?? 'ไม่ได้ระบุเหตุผล';
         print('พบป้ายทะเบียนอันตราย เหตุผล: $reason');
 
+        setState(() {
+          _isDangerous = true;
+          _dangerReason = reason;
+        });
+
         await _speakResult(
           'เตือน!   รถคันนี้อยู่ในรายชื่ออันตราย   เหตุผลคือ $reason ป้ายทะเบียน $plateText'
         );
@@ -233,6 +246,11 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
         }
       } else {
         print('ไม่พบป้ายทะเบียนอันตราย');
+
+        setState(() {
+          _isDangerous = false;
+          _dangerReason = '';
+        });
         await _speakResult('รถคันนี้ปลอดภัย ป้ายทะเบียน $plateText');
       }
 
@@ -528,6 +546,15 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
 
   // ✅ หน้าจอแสดงผลลัพธ์
   Widget _buildResultView() {
+
+    final Color bgColor = _isDangerous ? Colors.red.shade700 : Colors.green.shade700;
+    final Color bgColorDark = _isDangerous ? Colors.red.shade900 : Colors.green.shade900;
+    final Color textColor = _isDangerous ? Colors.red.shade700 : Colors.green.shade700;
+    final Color lightBgColor = _isDangerous ? Colors.red.shade50 : Colors.green.shade50;
+    final Color buttonColor = _isDangerous ? Colors.red.shade800 : Colors.green.shade800;
+    final IconData statusIcon = _isDangerous ? Icons.warning : Icons.check_circle;
+    final String statusText = _isDangerous ? 'พบรถอันตราย!' : 'ตรววจจับสำเร็จ';
+
     return Container(
       width: double.infinity, // ✅ บังคับให้เต็มความกว้าง
       height: double.infinity, // ✅ บังคับให้เต็มความสูง
@@ -535,10 +562,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.green.shade700,
-            Colors.green.shade900,
-          ],
+          colors: [bgColor, bgColorDark],
         ),
       ),
       child: Column(
@@ -615,7 +639,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                                 style: TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade700,
+                                  color: textColor,
                                   letterSpacing: 2,
                                 ),
                                 textAlign: TextAlign.center,
@@ -640,6 +664,41 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                                   ),
                                 ),
                               ),
+
+                              if (_isDangerous && _dangerReason.isNotEmpty) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.red.shade300,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.red.shade700,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _dangerReason,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.red.shade700,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -665,7 +724,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: Colors.green.shade800,
+                          foregroundColor: buttonColor,
                           padding: const EdgeInsets.symmetric(
                             vertical: 22,
                             horizontal: 32,
@@ -692,7 +751,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                   label: const Text('คลัง'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.green.shade700,
+                    foregroundColor: buttonColor,
                     padding: const EdgeInsets.symmetric(vertical: 28),
                     textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -706,7 +765,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                   label: const Text('สแกนใหม่'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: Colors.green.shade700,
+                    foregroundColor: buttonColor,
                     padding: const EdgeInsets.symmetric(vertical: 28),
                     textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
