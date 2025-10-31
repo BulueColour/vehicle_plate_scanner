@@ -8,7 +8,6 @@ plugins {
 
 android {
     namespace = "com.example.vehicle_plate_scanner"
-    namespace = "com.burhanrashid.flutter_vibrate"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
 

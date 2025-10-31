@@ -203,6 +203,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
 
       HapticFeedback.heavyImpact();
 
+
       await _speakResult('กำลังประมวลผล');
     } catch (e) {
       print('Vibration or TTS error: $e');
