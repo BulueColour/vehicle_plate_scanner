@@ -42,7 +42,6 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
     super.initState();
     _initTTS();
     _initCamera();
-    _testFirestore();
   }
 
   Future<void> _testFirestore() async {
