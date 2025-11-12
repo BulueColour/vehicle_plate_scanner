@@ -643,26 +643,6 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
                                 ),
                                 textAlign: TextAlign.center,
                               ),
-                              const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: _confidence > 0.7
-                                      ? Colors.green.shade50
-                                      : Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'ความมั่นใจ: ${(_confidence * 100).toStringAsFixed(1)}%',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: _confidence > 0.7
-                                        ? Colors.green.shade700
-                                        : Colors.orange.shade700,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
 
                               if (_isDangerous && _dangerReason.isNotEmpty) ...[
                                 const SizedBox(height: 16),
