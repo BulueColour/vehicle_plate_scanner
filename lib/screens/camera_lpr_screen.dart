@@ -223,7 +223,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
 
       if (dangerData != null) {
         final reason = dangerData['reason'] ?? 'ไม่ได้ระบุเหตุผล';
-        print('พบป้ายทะเบียนอันตราย เหตุผล: $reason');
+        print('พบป้ายทะเบียนที่มีความเสี่ยง เหตุผล: $reason');
 
         setState(() {
           _isDangerous = true;
@@ -231,20 +231,20 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
         });
 
         await _speakResult(
-          'เตือน!   รถคันนี้อยู่ในรายชื่ออันตราย   เหตุผลคือ $reason ป้ายทะเบียน $plateText'
+          'เตือน!   รถคันนี้อยู่ในรายชื่อที่มีความเสี่ยง   เหตุผลคือ $reason ป้ายทะเบียน $plateText'
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('รถอันตราย: $reason'),
+              content: Text('รถที่มีความเสี่ยง: $reason'),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 5),
             ),
           );
         }
       } else {
-        print('ไม่พบป้ายทะเบียนอันตราย');
+        print('ไม่พบป้ายทะเบียนที่มีความเสี่ยง');
 
         setState(() {
           _isDangerous = false;
@@ -552,7 +552,7 @@ class _CameraLPRScreenState extends State<CameraLPRScreen> {
     final Color lightBgColor = _isDangerous ? Colors.red.shade50 : Colors.green.shade50;
     final Color buttonColor = _isDangerous ? Colors.red.shade800 : Colors.green.shade800;
     final IconData statusIcon = _isDangerous ? Icons.warning : Icons.check_circle;
-    final String statusText = _isDangerous ? 'พบรถอันตราย!' : 'ตรววจจับสำเร็จ';
+    final String statusText = _isDangerous ? 'พบรถที่มีความเสี่ยง!' : 'ตรววจจับสำเร็จ';
 
     return Container(
       width: double.infinity, // ✅ บังคับให้เต็มความกว้าง
